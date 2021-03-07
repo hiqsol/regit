@@ -15,9 +15,34 @@ Wraps git with several useful features:
 ## Installation
 
 No installation required.
-It's just a single python file without dependencies.
+It's just a single Python 3 executable without dependencies.
 
 Just download and run.
+
+## Alternatives
+
+I've really tried and spent lot of time looking for already existing tool for the job.
+There are lots of them. Maybe you could find something more suitable for your needs.
+
+- [repo]:       helps manage many Git repositories, specialized for Android development (Python)
+- [gita]:       manage multiple git repos in home (Python)
+- [myrepos]:    manage all your version control repos (Perl)
+- [gitbatch]:   text-based UI to manage multiple git repos in one place (Go)
+- [git-plus]:   run commands in multiple git repos (Python)
+- [mu-repo]:    help working with multiple git repos (Python)
+- [mugit]:      managing a workspace containing multiple git repositories (Python)
+- [gr]:         managing multiple git repositories (JavaScript)
+- [mgit]:       layered git repositories (Shell)
+
+[repo]:         https://github.com/GerritCodeReview/git-repo
+[gita]:         https://github.com/nosarthur/gita
+[myrepos]:      https://github.com/RichiH/myrepos
+[gitbatch]:     https://github.com/isacikgoz/gitbatch
+[git-plus]:     https://github.com/tkrajina/git-plus
+[mu-repo]:      https://github.com/fabioz/mu-repo/
+[mugit]:        https://bitbucket.org/digitalstirling/mugit/
+[gr]:           https://github.com/mixu/gr
+[mgit]:         https://github.com/capr/mgit
 
 ## License
 
