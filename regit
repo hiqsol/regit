@@ -44,7 +44,28 @@ class Aux:
             self.warning('! failed: {}'.format(result))
         return result
 
-    def die(self, text, color='error'):
+    def read_config_file(self, path):
+        with open(path) as file:
+            lines = file.readlines()
+        self.repos = {}
+        section = ''
+        result = {}
+        for line in lines:
+            line = line.strip()
+            check = re.search('^\[(.+)\]$', line)
+            if check:
+                section = check.group(1)
+                if not section in result:
+                    result[section] = {}
+                continue
+            check = re.search('^\s*(\S+)\s*=\s*(.+)\s*$', line)
+            if check:
+                result[section][check.group(1)] = check.group(2)
+                continue
+            result[section][line] = line
+        return result
+
+    def die(self, text='die', color='error'):
         self.error(text)
         quit()
 
