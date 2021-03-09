@@ -36,5 +36,54 @@ class ReGit:
         parser.add_argument('command', nargs='?', action='store', type=str, default='help', help='command name')
         return parser
 
+class Aux:
+    def system(self, command):
+        self.notice('> ' + command.rstrip())
+        result = os.system(command)
+        if result:
+            self.warning('! failed: {}'.format(result))
+        return result
+
+    def die(self, text, color='error'):
+        self.error(text)
+        quit()
+
+    def error(self, text, color='error'):
+        print(self.colored(text, color))
+
+    def warning(self, text, color='warning'):
+        print(self.colored(text, color))
+
+    def notice(self, text, color='notice'):
+        print(self.colored(text, color))
+
+    def which(self, binary):
+        return backtick('which ' + binary)
+
+    def backtick(self, command):
+        return os.popen(command).read().strip()
+
+    def colored(self, text, color):
+        types = {
+            'notice':   'white',
+            'success':  'green',
+            'warning':  'yellow',
+            'error':    'red',
+        }
+        colors = {
+            'normal':   '',
+            'white':    '\033[97m',
+            'cyan':     '\033[96m',
+            'magenta':  '\033[95m',
+            'blue':     '\033[94m',
+            'yellow':   '\033[93m',
+            'green':    '\033[92m',
+            'red':      '\033[91m',
+            'end':      '\033[0m',
+        }
+        if color in types:
+            color = types[color]
+        return colors[color] + text + colors['end']
+
 if __name__ == '__main__':
     ReGit().run()
