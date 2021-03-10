@@ -16,18 +16,51 @@ class ReGit:
         self.parser.print_help()
 
     def up(self):
-        self.find_root()
-        self.load_config()
+        self.git('pull --rebase')
         for path in self.repos:
             if not os.path.exists(path):
-                self.clone(path)
+                self.vcs_clone('', path)
+            else:
+                self.up_dir(path)
 
-    def pull_all(self):
-        for path, repo in self.repos.iteritems():
-            vcs_pull(repo, path)
+    def up_dir(self, path):
+        cwd = os.getcwd()
+        os.chdir(path)
+        self.aux.warning(os.getcwd())
+        result = self.regit('up')
+        os.chdir(cwd)
+        return result
 
-    def clone(self, path):
-        self.aux.warning('clone ' + path)
+    def clone(self):
+        result = self.vcs_clone(self.args.arg1, self.args.arg2)
+        if result:
+            self.error('! failed')
+        # return self.up_dir(path)
+        return result
+
+    def vcs_clone(self, repo, path):
+        zpath = repo if repo else path
+        zrepo = self.path2repo(zpath)
+        if not zrepo:
+            self.aux.die("don't know repo for " + zpath)
+        return self.git('clone {} {}'.format(zrepo, path))
+
+    def path2repo(self, path):
+        if self.is_repo_url(path):
+            return path
+        repo = self.repos.get(path)
+        if repo and repo != path:
+            return repo
+        if not path in self.knownRepos:
+            parts = path.split(os.path.sep)
+            if len(parts)<2:
+                return ''
+            parts.pop(0)
+            return self.path2repo(os.path.sep.join(parts))
+        return self.knownRepos[path]
+
+    def is_repo_url(self, repo):
+        return ':' in repo or '@' in repo
 
     def vcs_pull(self, path):
         if os.path.exists(path):
@@ -36,16 +69,19 @@ class ReGit:
             return vcs_clone(repo, path)
 
     def load_config(self):
-        local = self.aux.read_config_file('.regit')
+        path = '.regit'
+        if not os.path.exists(path):
+            return
+        local = self.aux.read_config_file(path)
+        globe = self.aux.read_config_file(os.path.expanduser('~/.config/regit/config'))
         self.repos = local['repos']
-
-    def find_root(self):
-        self.aux.warning('TODO implement find_root')
+        self.knownRepos = globe['known-repos']
 
     def run(self):
         args, unknown = self.parser.parse_known_args()
         if args.command in dir(ReGit):
             self.args = args
+            self.load_config()
             getattr(self, args.command)()
         else:
             args = sys.argv
@@ -58,14 +94,21 @@ class ReGit:
         parser.add_argument('-v', '--verbose', action='store_const', dest='verbose', const='',     default=' --quiet', help='be verbose')
         parser.add_argument('-V', '--version', action='version', version='%(prog)s 0.0.1')
         parser.add_argument('command', nargs='?', action='store', type=str, default='help', help='command name')
+        parser.add_argument('arg1', nargs='?', action='store', type=str, default='')
+        parser.add_argument('arg2', nargs='?', action='store', type=str, default='')
         return parser
+
+    def regit(self, command):
+        return self.aux.system(__file__ + ' ' + command)
+    def git(self, command):
+        return self.aux.system('git ' + command)
 
 class Aux:
     def system(self, command):
         self.notice('> ' + command.rstrip())
         result = os.system(command)
         if result:
-            self.warning('! failed: {}'.format(result))
+            self.error('! failed')
         return result
 
     def read_config_file(self, path):
