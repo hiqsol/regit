@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import re
 import sys
 import argparse
 from pprint import pprint
@@ -8,15 +9,38 @@ from pprint import pprint
 class ReGit:
     def __init__(self):
         self.parser = self.initParser()
+        self.repos = {};
+        self.aux = Aux();
 
     def help(self):
         self.parser.print_help()
 
     def up(self):
-        print('up')
+        self.find_root()
+        self.load_config()
+        for path in self.repos:
+            if not os.path.exists(path):
+                self.clone(path)
+
+    def pull_all(self):
+        for path, repo in self.repos.iteritems():
+            vcs_pull(repo, path)
+
+    def clone(self, path):
+        self.aux.warning('clone ' + path)
+
+    def vcs_pull(self, path):
+        if os.path.exists(path):
+            return system('git -C {} pull --rebase'.format(path))
+        else:
+            return vcs_clone(repo, path)
+
+    def load_config(self):
+        local = self.aux.read_config_file('.regit')
+        self.repos = local['repos']
 
     def find_root(self):
-        print('find_root')
+        self.aux.warning('TODO implement find_root')
 
     def run(self):
         args, unknown = self.parser.parse_known_args()
