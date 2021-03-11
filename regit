@@ -69,13 +69,16 @@ class ReGit:
             return vcs_clone(repo, path)
 
     def load_config(self):
-        path = '.regit'
-        if not os.path.exists(path):
-            return
-        local = self.aux.read_config_file(path)
-        globe = self.aux.read_config_file(os.path.expanduser('~/.config/regit/config'))
-        self.repos = local['repos']
-        self.knownRepos = globe['known-repos']
+        lpath = '.regit'
+        gpath = os.path.expanduser('~/.config/regit/config')
+        if os.path.exists(lpath):
+            local = self.aux.read_config_file(lpath)
+            if 'repos' in local:
+                self.repos = local['repos']
+        if os.path.exists(gpath):
+            globe = self.aux.read_config_file(gpath)
+            if 'known-repos' in globe:
+                self.knownRepos = globe['known-repos']
 
     def run(self):
         args, unknown = self.parser.parse_known_args()
