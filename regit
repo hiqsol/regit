@@ -3,14 +3,16 @@
 import os
 import re
 import sys
+import tempfile
 import argparse
 from pprint import pprint
 
 class ReGit:
     def __init__(self):
         self.parser = self.initParser()
-        self.repos = {};
-        self.aux = Aux();
+        self.repos = {}
+        self.knownRepos = {}
+        self.aux = Aux()
 
     def help(self):
         self.parser.print_help()
@@ -32,11 +34,41 @@ class ReGit:
         return result
 
     def clone(self):
-        result = self.vcs_clone(self.args.arg1, self.args.arg2)
+        repo = self.args.arg1
+        path = self.args.arg2
+        if path == '.':
+            result = self.clone2dot(repo)
+        else:
+            result = self.vcs_clone(repo, path)
         if result:
-            self.error('! failed')
+            self.aux.error('! failed')
+        # else up needed to clone recuresively
         # return self.up_dir(path)
         return result
+
+    def clone2dot(self, repo):
+        if os.path.exists('.git'):
+            self.aux.die('git repository already exists in ' + os.getcwd())
+
+        cwd = os.getcwd()
+        tmp = tempfile.mkdtemp(dir=os.path.dirname(cwd))
+        dir = os.path.basename(cwd)
+
+        err = self.aux.system('mv {cwd} {tmp}'.format(cwd=cwd, tmp=tmp))
+        if err:
+            return err
+        try:
+            err_clone = self.vcs_clone(repo, cwd)
+        except Exception:
+            err_clone = 'failed'
+
+        err_rsync = self.aux.system('rsync -a --remove-source-files {tmp}/{dir}/ {cwd}/'.format(tmp=tmp, dir=dir, cwd=cwd))
+        if not err_clone and not err_rsync:
+            self.aux.system('rm -rf {tmp}'.format(tmp=tmp))
+        else:
+            self.aux.warning('there were errors so tmp dir has been kept in ' + tmp)
+        self.aux.warning("don't forget `cd .`")
+        return err_clone
 
     def vcs_clone(self, repo, path):
         zpath = repo if repo else path
