@@ -18,25 +18,33 @@ class ReGit:
         self.parser.print_help()
 
     def up(self):
-        result = self.git('pull --rebase')
+        err_pull = self.git('pull --rebase')
+        err_deps = self.deps()
+        return err_pull if err_pull else err_deps
+
+    def deps(self):
+        result = 0
         for path in self.repos:
             if not os.path.exists(path):
-                err = self.vcs_clone('', path)
+                result = self.vcs_clone('', path)
             else:
-                err = self.up_dir(path)
-            if err:
-                result = err
+                result = self.up_in_dir(path)
         return result
 
-    def up_dir(self, path):
+    def up_in_dir(self, path):
+        return self.do_in_dir('up', path)
+    def deps_in_dir(self, path):
+        return self.do_in_dir('deps', path)
+
+    def do_in_dir(self, command, path):
         if not path:
-            self.aux.die('path not given for up_dir')
+            self.aux.die('path not given for up_in_dir')
         if path == '.':
-            return self.regit('up')
+            return self.regit(command)
         cwd = os.getcwd()
         os.chdir(path)
         self.aux.warning(os.getcwd())
-        result = self.regit('up')
+        result = self.regit(command)
         os.chdir(cwd)
         return result
 
@@ -49,7 +57,7 @@ class ReGit:
             result = self.vcs_clone(repo, path)
         if result:
             self.aux.error('! failed')
-        return self.up_dir(path if path else self.repo2path(repo))
+        return self.deps_in_dir(path if path else self.repo2path(repo))
 
     def repo2path(self, repo):
         path = self.path2repo(repo)
