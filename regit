@@ -18,14 +18,21 @@ class ReGit:
         self.parser.print_help()
 
     def up(self):
-        self.git('pull --rebase')
+        result = self.git('pull --rebase')
         for path in self.repos:
             if not os.path.exists(path):
-                self.vcs_clone('', path)
+                err = self.vcs_clone('', path)
             else:
-                self.up_dir(path)
+                err = self.up_dir(path)
+            if err:
+                result = err
+        return result
 
     def up_dir(self, path):
+        if not path:
+            self.aux.die('path not given for up_dir')
+        if path == '.':
+            return self.regit('up')
         cwd = os.getcwd()
         os.chdir(path)
         self.aux.warning(os.getcwd())
@@ -42,9 +49,12 @@ class ReGit:
             result = self.vcs_clone(repo, path)
         if result:
             self.aux.error('! failed')
-        # else up needed to clone recuresively
-        # return self.up_dir(path)
-        return result
+        return self.up_dir(path if path else self.repo2path(repo))
+
+    def repo2path(self, repo):
+        path = self.path2repo(repo)
+        self.aux.warning(repo)
+        self.aux.die(path)
 
     def clone2dot(self, repo):
         if os.path.exists('.git'):
@@ -67,6 +77,7 @@ class ReGit:
             self.aux.system('rm -rf {tmp}'.format(tmp=tmp))
         else:
             self.aux.warning('there were errors so tmp dir has been kept in ' + tmp)
+        os.chdir(cwd)
         self.aux.warning("don't forget `cd .`")
         return err_clone
 
