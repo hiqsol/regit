@@ -73,6 +73,7 @@ class ReGit:
         dir = os.path.basename(cwd)
 
         self.aux.system('mv {cwd} {tmp}'.format(cwd=cwd, tmp=tmp))
+        os.mkdir(cwd)
         os.chdir(cwd)
         try:
             err_clone = self.vcs_clone(repo, cwd)
