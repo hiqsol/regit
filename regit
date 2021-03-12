@@ -72,9 +72,7 @@ class ReGit:
         tmp = tempfile.mkdtemp()
         dir = os.path.basename(cwd)
 
-        err = self.aux.system('mv {cwd} {tmp}'.format(cwd=cwd, tmp=tmp))
-        if err:
-            return err
+        self.aux.system('mv {cwd} {tmp}'.format(cwd=cwd, tmp=tmp))
         try:
             err_clone = self.vcs_clone(repo, cwd)
         except Exception:
