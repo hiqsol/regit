@@ -70,22 +70,18 @@ class ReGit:
 
         cwd = os.getcwd()
         tmp = tempfile.mkdtemp()
-        dir = os.path.basename(cwd)
 
-        self.aux.system('mv {cwd} {tmp}'.format(cwd=cwd, tmp=tmp))
-        os.mkdir(cwd)
-        os.chdir(cwd)
+        self.aux.system('find {cwd} -mindepth 1 -maxdepth 1 -exec mv -t {tmp} -- {{}} +'.format(cwd=cwd, tmp=tmp))
         try:
             err_clone = self.vcs_clone(repo, cwd)
         except Exception:
             err_clone = 'failed'
 
-        err_rsync = self.aux.system('rsync -a --remove-source-files {tmp}/{dir}/ {cwd}/'.format(tmp=tmp, dir=dir, cwd=cwd))
+        err_rsync = self.aux.system('rsync -a --remove-source-files {tmp}/ {cwd}/'.format(tmp=tmp, cwd=cwd))
         if not err_clone and not err_rsync:
             self.aux.system('rm -rf {tmp}'.format(tmp=tmp))
         else:
             self.aux.warning('there were errors so tmp dir has been kept in ' + tmp)
-        self.aux.warning("don't forget `cd .`")
         return err_clone
 
     def vcs_clone(self, repo, path):
