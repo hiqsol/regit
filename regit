@@ -137,7 +137,7 @@ class Aux:
 
     def die(self, text='die', color='error'):
         self.error(text)
-        quit()
+        raise Exception(text)
 
     def error(self, text, color='error'):
         print(self.colored(text, color))
