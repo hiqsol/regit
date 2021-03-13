@@ -60,9 +60,8 @@ class ReGit:
         return self.deps_in_dir(path if path else self.repo2path(repo))
 
     def repo2path(self, repo):
-        path = self.path2repo(repo)
-        self.aux.warning(repo)
-        self.aux.die(path)
+        url = self.path2repo_or_die(repo)
+        return os.path.basename(url)
 
     def clone2dot(self, repo):
         if os.path.exists('.git'):
@@ -90,11 +89,14 @@ class ReGit:
         return self.aux.system('rsync -a --remove-source-files {src}/ {dst}/'.format(src=src, dst=dst))
 
     def vcs_clone(self, repo, path):
-        zpath = repo if repo else path
-        zrepo = self.path2repo(zpath)
-        if not zrepo:
-            self.aux.die("don't know repo for " + zpath)
-        return self.git('clone {} {}'.format(zrepo, path))
+        repo = self.path2repo_or_die(repo if repo else path)
+        return self.git('clone {} {}'.format(repo, path))
+
+    def path2repo_or_die(self, path):
+        repo = self.path2repo(path)
+        if repo:
+            return repo
+        self.aux.die("don't know repo for " + path)
 
     def path2repo(self, path):
         if self.is_repo_url(path):
