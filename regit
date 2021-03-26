@@ -17,6 +17,9 @@ class ReGit:
     def help(self):
         self.parser.print_help()
 
+    def self(self):
+        return self.vcs_pull(os.path.dirname(__file__))
+
     def up(self):
         err_pull = self.git('pull --rebase')
         err_deps = self.deps()
@@ -92,6 +95,9 @@ class ReGit:
         repo = self.path2repo_or_die(repo if repo else path)
         return self.git('clone {} {}'.format(repo, path))
 
+    def vcs_pull(self, path):
+        return self.git('-C {} pull --rebase'.format(path))
+
     def path2repo_or_die(self, path):
         repo = self.path2repo(path)
         if repo:
@@ -117,12 +123,6 @@ class ReGit:
 
     def is_repo_url(self, repo):
         return ':' in repo or '@' in repo
-
-    def vcs_pull(self, path):
-        if os.path.exists(path):
-            return system('git -C {} pull --rebase'.format(path))
-        else:
-            return vcs_clone(repo, path)
 
     def load_config(self):
         lpath = '.regit'
