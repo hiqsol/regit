@@ -104,7 +104,7 @@ class ReGit:
             return repo
         parts = path.split(os.path.sep)
         if len(parts)<2:
-            self.aux.die("don't know repo for " + path)
+            path = os.path.basename(os.getcwd()) + '/' + path
         return 'git@github.com:' + path
 
     def path2repo(self, path):
