@@ -34,6 +34,17 @@ class ReGit:
                 result = self.up_in_dir(path)
         return result
 
+    def clone(self):
+        repo = self.args.arg1
+        path = self.args.arg2
+        if path == '.':
+            result = self.clone2dot(repo)
+        else:
+            result = self.vcs_clone(repo, path)
+        if result:
+            self.aux.error('! failed')
+        return self.deps_in_dir(path if path else self.repo2path(repo))
+
     def up_in_dir(self, path):
         return self.do_in_dir('up', path)
     def deps_in_dir(self, path):
@@ -50,17 +61,6 @@ class ReGit:
         result = self.regit(command)
         os.chdir(cwd)
         return result
-
-    def clone(self):
-        repo = self.args.arg1
-        path = self.args.arg2
-        if path == '.':
-            result = self.clone2dot(repo)
-        else:
-            result = self.vcs_clone(repo, path)
-        if result:
-            self.aux.error('! failed')
-        return self.deps_in_dir(path if path else self.repo2path(repo))
 
     def repo2path(self, repo):
         url = self.path2repo_or_die(repo)
@@ -136,7 +136,7 @@ class ReGit:
             if 'known-repos' in globe:
                 self.knownRepos = globe['known-repos']
 
-    def run(self):
+    def _run(self):
         args, unknown = self.parser.parse_known_args()
         if args.command in dir(ReGit):
             self.args = args
@@ -233,4 +233,4 @@ class Aux:
         return colors[color] + text + colors['end']
 
 if __name__ == '__main__':
-    ReGit().run()
+    ReGit()._run()

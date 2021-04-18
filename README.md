@@ -8,9 +8,10 @@
 
 Wraps git with several useful features:
 
-- all - repeat command for current repo and all dependencies
-- sync - sync current repo and all dependencies
+- up - pull current repo and all the dependencies
+- all - TODO repeat command for current repo and all dependencies
 - scan - scan directory tree recursively to find unsynced repositories
+- clone - clone with url resolution
 
 ## Installation
 
