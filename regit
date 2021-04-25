@@ -9,18 +9,26 @@ from pprint import pprint
 
 class ReGit:
     def __init__(self):
-        self.parser = self.initParser()
-        self.aux = Aux()
-        self.config = Config()
+        args, unknown = self.parser.parse_known_args()
+        command = args.command
+        if command.startswith('_'):
+            command = ''
+        if command in dir(ReGit):
+            self.args = args
+            getattr(self, command)()
+        else:
+            args = sys.argv
+            args[0] = 'git'
+            os.execvp('git', args)
 
     def help(self):
         self.parser.print_help()
 
     def self(self):
-        return self.vcs_pull(os.path.dirname(__file__))
+        return self.git.pull(os.path.dirname(__file__))
 
     def up(self):
-        err_pull = self.git('pull --rebase')
+        err_pull = self.git.do('pull --rebase')
         err_deps = self.deps()
         return err_pull if err_pull else err_deps
 
@@ -28,42 +36,74 @@ class ReGit:
         result = 0
         for path in self.config.repos:
             if not os.path.exists(path):
-                result = self.vcs_clone('', path)
+                result = self.git.clone('', path)
             else:
-                result = self.up_in_dir(path)
+                result = self.repeat.up(path)
         return result
 
     def clone(self):
-        repo = self.args.arg1
-        path = self.args.arg2
-        if path == '.':
-            result = self.clone2dot(repo)
-        else:
-            result = self.vcs_clone(repo, path)
-        if result:
-            self.aux.error('! failed')
-        return self.deps_in_dir(path if path else self.repo2path(repo))
+        return self.cloner.clone(self.args.arg1, self.args.arg2)
 
-    def up_in_dir(self, path):
-        return self.do_in_dir('up', path)
-    def deps_in_dir(self, path):
-        return self.do_in_dir('deps', path)
+    def _getProp(self, name, klass):
+        if not hasattr(self, name):
+            setattr(self, name, klass(self))
+        return getattr(self, name)
 
-    def do_in_dir(self, command, path):
+    @property
+    def aux(self): return self._getProp('_aux', Aux)
+    @property
+    def git(self): return self._getProp('_git', Git)
+    @property
+    def config(self): return self._getProp('_config', Config)
+    @property
+    def cloner(self): return self._getProp('_cloner', Cloner)
+    @property
+    def parser(self): return self._getProp('_parser', ArgParser)
+    @property
+    def repeat(self): return self._getProp('_repeat', Repeat)
+
+class Component:
+    def __init__(self, regit):
+        self.regit = regit
+
+    @property
+    def aux(self): return self.regit.aux
+    @property
+    def git(self): return self.regit.git
+    @property
+    def config(self): return self.regit.config
+    @property
+    def repeat(self): return self.regit.repeat
+
+class Repeat(Component):
+    def up(self, path):
+        return self.do('up', path)
+
+    def deps(self, path):
+        return self.do('deps', path)
+
+    def do(self, command, path):
         if not path:
             self.aux.die('path not given for up_in_dir')
         if path == '.':
-            return self.regit(command)
+            return self.aux.do_regit(command)
         cwd = os.getcwd()
         os.chdir(path)
         self.aux.warning(os.getcwd())
-        result = self.regit(command)
+        result = self.aux.do_regit(command)
         os.chdir(cwd)
         return result
 
-    def repo2path(self, repo):
-        url = self.config.path2repo_or_die(repo)
-        return os.path.basename(url)
+class Cloner(Component):
+    def clone(self, repo, path):
+        if path == '.':
+            result = self.clone2dot(repo)
+        else:
+            print('repo: ' + repo)
+            result = self.git.clone(repo, path)
+        if result:
+            self.aux.error('! failed')
+        return self.repeat.deps(path if path else self.config.repo2path(repo))
 
     def clone2dot(self, repo):
         if os.path.exists('.git'):
@@ -75,7 +115,7 @@ class ReGit:
 
         self.aux.system('find {cwd} -mindepth 1 -maxdepth 1 -exec mv -t {tmp} -- {{}} +'.format(cwd=cwd, tmp=tmp))
         try:
-            result = self.vcs_clone(repo, rep)
+            result = self.git.clone(repo, rep)
         except Exception:
             result = 'failed'
 
@@ -87,46 +127,12 @@ class ReGit:
             self.aux.system('rm -rf {tmp}'.format(tmp=tmp))
         return result
 
-    def rsync_move(self, src, dst):
-        return self.aux.system('rsync -a --remove-source-files {src}/ {dst}/'.format(src=src, dst=dst))
-
-    def vcs_clone(self, repo, path):
-        repo = self.config.path2repo_or_die(repo if repo else path)
-        return self.git('clone {} {}'.format(repo, path))
-
-    def vcs_pull(self, path):
-        return self.git('-C {} pull --rebase'.format(path))
-
-    def _run(self):
-        args, unknown = self.parser.parse_known_args()
-        if args.command in dir(ReGit):
-            self.args = args
-            self.config.load()
-            getattr(self, args.command)()
-        else:
-            args = sys.argv
-            args[0] = 'git'
-            os.execvp('git', args)
-
-    def initParser(self):
-        parser = argparse.ArgumentParser(description="Repeated Git version 0.0.1")
-        parser.add_argument('-f', '--force',   action='store_const', dest='force',   const=True,   default=False,      help='force')
-        parser.add_argument('-v', '--verbose', action='store_const', dest='verbose', const='',     default=' --quiet', help='be verbose')
-        parser.add_argument('-V', '--version', action='version', version='%(prog)s 0.0.1')
-        parser.add_argument('command', nargs='?', action='store', type=str, default='help', help='command name')
-        parser.add_argument('arg1', nargs='?', action='store', type=str, default='')
-        parser.add_argument('arg2', nargs='?', action='store', type=str, default='')
-        return parser
-
-    def regit(self, command):
-        return self.aux.system(__file__ + ' ' + command)
-    def git(self, command):
-        return self.aux.system('git ' + command)
-
 class Config:
-    def __init__(self):
+    def __init__(self, regit):
+        self.regit = regit
         self.repos = {}
-        self.knownepos = {}
+        self.knownRepos = {}
+        self.load()
 
     def load(self):
         lpath = '.regit'
@@ -160,6 +166,10 @@ class Config:
             result[section][line] = line
         return result
 
+    def repo2path(self, repo):
+        url = self.path2repo_or_die(repo)
+        return os.path.basename(url)
+
     def path2repo_or_die(self, path):
         repo = self.path2repo(path)
         if repo:
@@ -186,7 +196,24 @@ class Config:
     def is_repo_url(self, repo):
         return ':' in repo or '@' in repo
 
-class Aux:
+class Git(Component):
+    def do(self, command):
+        return self.aux.system('git ' + command)
+
+    def clone(self, repo, path):
+        repo = self.config.path2repo_or_die(repo if repo else path)
+        return self.do('clone {} {}'.format(repo, path))
+
+    def pull(self, path):
+        return self.do('-C {} pull --rebase'.format(path))
+
+class Aux(Component):
+    def do_regit(self, command):
+        return self.system(__file__ + ' ' + command)
+
+    def rsync_move(self, src, dst):
+        return self.system('rsync -a --remove-source-files {src}/ {dst}/'.format(src=src, dst=dst))
+
     def system(self, command):
         self.notice('> ' + command.rstrip())
         result = os.system(command)
@@ -235,5 +262,16 @@ class Aux:
             color = types[color]
         return colors[color] + text + colors['end']
 
+class ArgParser(argparse.ArgumentParser):
+    def __init__(self, regit):
+        self.regit = regit
+        argparse.ArgumentParser.__init__(self, description="Repeated Git version 0.0.1")
+        self.add_argument('-f', '--force',   action='store_const', dest='force',   const=True,   default=False,      help='force')
+        self.add_argument('-v', '--verbose', action='store_const', dest='verbose', const='',     default=' --quiet', help='be verbose')
+        self.add_argument('-V', '--version', action='version', version='%(prog)s 0.0.1')
+        self.add_argument('command', nargs='?', action='store', type=str, default='help', help='command name')
+        self.add_argument('arg1', nargs='?', action='store', type=str, default='')
+        self.add_argument('arg2', nargs='?', action='store', type=str, default='')
+
 if __name__ == '__main__':
-    ReGit()._run()
+    ReGit()
