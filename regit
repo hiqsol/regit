@@ -137,18 +137,27 @@ class Config(Component):
         self.load()
 
     def load(self):
-        lpath = '.regit'
-        gpath = os.path.expanduser('~/.config/regit/config')
-        if os.path.exists(lpath):
-            local = self.read_file(lpath)
-            if 'repos' in local:
-                self.repos = local['repos']
-        if os.path.exists(gpath):
-            globe = self.read_file(gpath)
-            if 'known-repos' in globe:
-                self.knownRepos = globe['known-repos']
-            if 'known-sources' in globe:
-                self.knownSources = globe['known-sources']
+        self.load_global('~/.config/regit/config')
+        self.load_local('.regit')
+
+    def load_global(self, path):
+        path = os.path.expanduser(path)
+        if os.path.exists(path):
+            data = self.read_file(path)
+            if 'known-repos' in data:
+                self.knownRepos.update(data['known-repos'])
+            if 'known-sources' in data:
+                self.knownSources.update(data['known-sources'])
+            if 'includes' in data:
+                for name,file in data['includes'].items():
+                    self.load_global(file)
+
+
+    def load_local(self, path):
+        if os.path.exists(path):
+            data = self.read_file(path)
+            if 'repos' in data:
+                self.repos.update(data['repos'])
 
     def read_file(self, path):
         with open(path) as file:
