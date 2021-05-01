@@ -184,13 +184,21 @@ class Config(Component):
         return os.path.basename(url)
 
     def path2repo_or_die(self, path):
-        repo = self.path2repo(path)
+        repo = self.repath2repo(path)
         if repo:
             return repo
         parts = path.split(os.path.sep)
         if len(parts)<2:
             path = os.path.basename(os.getcwd()) + '/' + path
         return self.config.defaultSource + path
+
+    def repath2repo(self, path):
+        repo = self.source2repo(path)
+        if not repo:
+            repo = self.path2repo(path)
+        if repo == path:
+            return repo
+        return self.repath2repo(repo)
 
     def path2repo(self, path):
         repo = self.source2repo(path)
