@@ -181,7 +181,7 @@ class Config(Component):
         parts = path.split(os.path.sep)
         if len(parts)<2:
             path = os.path.basename(os.getcwd()) + '/' + path
-        return 'git@github.com:' + path
+        return self.config.defaultSource + path
 
     def path2repo(self, path):
         repo = self.source2repo(path)
@@ -202,7 +202,7 @@ class Config(Component):
 
     def source2repo(self, path):
         check = self.is_repo_with_source(path)
-        if not check:
+        if check is None:
             return False
         source = check.group(1)
         if not source in self.knownSources:
@@ -210,10 +210,14 @@ class Config(Component):
         return self.knownSources[source] + check.group(2)
 
     def is_repo_with_source(self, path):
-        return re.match(r"(^\w+):(\w+/?\w*)$", path)
+        return re.match('^([\w.-]+):([\w.-]+/?[\w.-]*)$', path)
 
     def is_repo_url(self, repo):
         return ':' in repo or '@' in repo
+
+    @property
+    def defaultSource(self):
+        return list(self.knownSources.values())[0]
 
 class Git(Component):
     def do(self, command):
