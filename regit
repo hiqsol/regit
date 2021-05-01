@@ -9,17 +9,19 @@ from pprint import pprint
 
 class ReGit:
     def __init__(self):
-        args, unknown = self.parser.parse_known_args()
-        command = args.command
-        if command.startswith('_'):
-            command = ''
+        self._start()
+
+    def _start(self):
+        res = self.parser.parse_known_args()
+        if res is None:
+            return self.git.execvp()
+        self.args, extras = res
+        command = self.args.command
+        if not isinstance(command, str) or command.startswith('_'):
+            return self.help()
         if command in dir(ReGit):
-            self.args = args
-            getattr(self, command)()
-        else:
-            args = sys.argv
-            args[0] = 'git'
-            os.execvp('git', args)
+            return getattr(self, command)()
+        self.git.execvp()
 
     def help(self):
         self.parser.print_help()
@@ -42,7 +44,7 @@ class ReGit:
         return result
 
     def clone(self):
-        return self.cloner.clone(self.args.arg1, self.args.arg2)
+        return self.cloner.clone(self.args.repo, self.args.path)
 
     def _getProp(self, name, klass):
         if not hasattr(self, name):
@@ -101,7 +103,7 @@ class Cloner(Component):
         else:
             result = self.git.clone(repo, path)
         if result:
-            self.aux.error('! failed')
+            return result
         return self.repeat.deps(path if path else self.config.repo2path(repo))
 
     def clone2dot(self, repo):
@@ -224,6 +226,11 @@ class Git(Component):
     def pull(self, path):
         return self.do('-C {} pull --rebase'.format(path))
 
+    def execvp(self):
+        args = sys.argv
+        args[0] = 'git'
+        os.execvp('git', args)
+
 class Aux(Component):
     def do_regit(self, command):
         return self.system(__file__ + ' ' + command)
@@ -257,7 +264,15 @@ class Aux(Component):
     def backtick(self, command):
         return os.popen(command).read().strip()
 
-    def colored(self, text, color):
+    def tprint(self, text):
+        if sys.stdout.isatty():
+            print(text, end='')
+
+    def colored(self, text, color, apply = None):
+        if apply is None:
+            apply = sys.stdout.isatty()
+        if not apply:
+            return text
         types = {
             'notice':   'white',
             'success':  'green',
@@ -279,16 +294,48 @@ class Aux(Component):
             color = types[color]
         return colors[color] + text + colors['end']
 
-class ArgParser(argparse.ArgumentParser):
+class ArgParser(Component):
     def __init__(self, regit):
         self.regit = regit
-        argparse.ArgumentParser.__init__(self, description="Repeated Git version 0.0.1")
-        self.add_argument('-f', '--force',   action='store_const', dest='force',   const=True,   default=False,      help='force')
-        self.add_argument('-v', '--verbose', action='store_const', dest='verbose', const='',     default=' --quiet', help='be verbose')
-        self.add_argument('-V', '--version', action='version', version='%(prog)s 0.0.1')
-        self.add_argument('command', nargs='?', action='store', type=str, default='help', help='command name')
-        self.add_argument('arg1', nargs='?', action='store', type=str, default='')
-        self.add_argument('arg2', nargs='?', action='store', type=str, default='')
+        self.parser = MyArgumentParser(description="Repeated Git version 0.0.1")
+        self.add_base()
+        self.add_clone()
+        self.add_scan()
+        self.add_deps()
+        self.add_up()
+
+    def add_base(self):
+        self.parser.add_argument('-f', '--force',   action='store_const', dest='force',   const=True,   default=False, help='force')
+        self.parser.add_argument('-v', '--verbose', action='store_const', dest='verbose', const='',     default=False, help='be verbose')
+        self.parser.add_argument('-C', '--start-path', nargs=1, help='start at given directory')
+        self.parser.add_argument('-V', '--version', action='version', version='%(prog)s 0.0.1')
+        self.subparsers = self.parser.add_subparsers(required=False, dest='command', help='sub-command name')
+
+    def add_clone(self):
+        parser = self.subparsers.add_parser('clone', help='clone a repository into a new directory')
+        parser.add_argument('repo', nargs=None, action='store', type=str, default='', help='repository url or name')
+        parser.add_argument('path', nargs='?',  action='store', type=str, default='', help='path to clone to')
+
+    def add_scan(self):
+        parser = self.subparsers.add_parser('scan', help='recursively scan dirs for repos requiring attention')
+        parser.add_argument('path', nargs='?', action='store', type=str, default=os.getcwd(), help='directory to start from')
+        parser.add_argument('-p', '--pull', action='store_const', dest='pull', const='pull', default='fetch', help='pull instead of fetch')
+
+    def add_deps(self):
+        parser = self.subparsers.add_parser('deps', help='update dependencies')
+
+    def add_up(self):
+        parser = self.subparsers.add_parser('up', help='update current repo and dependencies')
+
+    def parse_known_args(self):
+        return self.parser.parse_known_args()
+
+    def print_help(self):
+        return self.parser.print_help()
+
+class MyArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        pass
 
 if __name__ == '__main__':
     ReGit()
