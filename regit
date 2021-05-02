@@ -197,7 +197,8 @@ class Scaner(Component):
         if status is None and not args.force:
             return
         if args.force or status.startswith(self.FETCHES):
-            os.system('git ' + args.pull + args.verbose)
+            quiet = '' if args.verbose else ' --quiet'
+            self.git.do(args.pull + quiet)
             status = self.check_status()
             if status is None:
                 return
