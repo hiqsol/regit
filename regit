@@ -21,6 +21,8 @@ class ReGit:
         if not isinstance(command, str) or command.startswith('_'):
             return self.help()
         if command in dir(ReGit):
+            if self.args.start_path:
+                os.chdir(self.args.start_path)
             return getattr(self, command)()
         self.git.execvp()
 
@@ -422,7 +424,7 @@ class ArgParser(Component):
     def add_base(self):
         self.parser.add_argument('-f', '--force',   action='store_const', dest='force',   const=True,   default=False, help='force')
         self.parser.add_argument('-v', '--verbose', action='store_const', dest='verbose', const='',     default=False, help='be verbose')
-        self.parser.add_argument('-C', '--start-path', nargs=1, help='start at given directory')
+        self.parser.add_argument('-C', dest='start_path', help='start at given directory')
         self.parser.add_argument('-V', '--version', action='version', version='%(prog)s 0.0.1')
         self.subparsers = self.parser.add_subparsers(dest='command', help='sub-command name')
 
