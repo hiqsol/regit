@@ -152,7 +152,6 @@ class Config(Component):
                 for name,file in data['includes'].items():
                     self.load_global(file)
 
-
     def load_local(self, path):
         if os.path.exists(path):
             data = self.read_file(path)
@@ -166,6 +165,8 @@ class Config(Component):
         result = {}
         for line in lines:
             line = line.strip()
+            if not line:
+                continue
             check = re.search('^\[(.+)\]$', line)
             if check:
                 section = check.group(1)
