@@ -145,6 +145,7 @@ class Scaner(Component):
         'nothing to commit, working directory clean',
         'nothing to commit, working tree clean',
     )
+    BEHIND = 'Your branch is behind'
     FETCHES = (
         'Your branch is ahead',
         'Your branch is behind',
@@ -195,6 +196,8 @@ class Scaner(Component):
         os.chdir(dir)
         status = self.check_status()
         if status is None and not args.force:
+            return
+        if args.skip_behind and status.startswith(self.BEHIND):
             return
         if args.force or status.startswith(self.FETCHES):
             quiet = '' if args.verbose else ' --quiet'
@@ -430,6 +433,7 @@ class ArgParser(Component):
 
     def add_scan(self):
         parser = self.subparsers.add_parser('scan', help='recursively scan dirs for repos requiring attention')
+        parser.add_argument('-b', '--skip-behind', action='store_const', dest='skip_behind', const=True, default=False, help="skip 'Your branch is behind'")
         parser.add_argument('-p', '--pull', action='store_const', dest='pull', const='pull', default='fetch', help='pull instead of fetch')
 
     def add_deps(self):
