@@ -5,6 +5,7 @@ import re
 import sys
 import tempfile
 import argparse
+from collections import OrderedDict
 from pprint import pprint
 
 class ReGit:
@@ -46,6 +47,9 @@ class ReGit:
     def clone(self):
         return self.cloner.clone(self.args.repo, self.args.path)
 
+    def scan(self):
+        return self.scaner.scan()
+
     def _getProp(self, name, klass):
         if not hasattr(self, name):
             setattr(self, name, klass(self))
@@ -59,6 +63,8 @@ class ReGit:
     def config(self): return self._getProp('_config', Config)
     @property
     def cloner(self): return self._getProp('_cloner', Cloner)
+    @property
+    def scaner(self): return self._getProp('_scaner', Scaner)
     @property
     def parser(self): return self._getProp('_parser', ArgParser)
     @property
@@ -127,6 +133,88 @@ class Cloner(Component):
         else:
             self.aux.system('rm -rf {tmp}'.format(tmp=tmp))
         return result
+
+class Scaner(Component):
+    WINDMILL = ['-', '\\', '|', '/']
+    GREETING = 'Scanning repos... '
+    SKIPS = (
+        'On branch',
+        'HEAD detached',
+        'Your branch is up-to-date',
+        'Your branch is up to date',
+        'nothing to commit, working directory clean',
+        'nothing to commit, working tree clean',
+    )
+    FETCHES = (
+        'Your branch is ahead',
+        'Your branch is behind',
+    )
+
+    def scan(self):
+        self.dir = os.getcwd()
+        repos = self.find_repos()
+        stats = self.check_repos(repos)
+        self.output_stats(stats)
+
+    def find_repos(self):
+        self.aux.tprint(self.GREETING)
+        sys.stdout.flush()
+        raws = os.popen('find . -name .git').readlines()
+        return sorted(raws)
+
+    def check_repos(self, repos):
+        stats = OrderedDict()
+        no = 0
+        prev = self.GREETING
+        for dir in repos:
+            dir = self.dir + '/' + dir[2:-6]
+            msg = self.WINDMILL[no % 4] + ' ' + dir
+            self.aux.tprint('\b' * 300)
+            self.aux.tprint(msg.ljust(len(prev)))
+            prev = msg
+            no += 1
+            status = self.check(dir)
+            if status:
+                stats[dir] = status
+        self.aux.tprint('\r')
+        self.aux.tprint(''.ljust(len(prev))) # cleans string with spaces
+        self.aux.tprint('\b' * 300)
+        self.aux.tprint('\r')
+        return stats
+
+    def output_stats(self, stats):
+        max = 1
+        for dir in stats:
+            if len(dir)>max:
+                max = len(dir)
+        for dir in stats:
+            print("{dir} - {status}".format(status=self.aux.colored(stats[dir], 'yellow'), dir=dir.ljust(max)))
+
+    def check(self, dir):
+        args = self.regit.args
+        os.chdir(dir)
+        status = self.check_status()
+        if status is None and not args.force:
+            return
+        if args.force or status.startswith(self.FETCHES):
+            os.system('git ' + args.pull + args.verbose)
+            status = self.check_status()
+            if status is None:
+                return
+        return status
+
+    def check_status(self):
+        status = None
+        for line in os.popen('git status').readlines():
+            status = line.strip()
+            if status and not self.is_skippable(status):
+                return status.strip('.,:')
+        return None
+
+    def is_skippable(self, status):
+        if status.startswith('# '):
+            status = status[2:]
+        return status.startswith(self.SKIPS)
 
 class Config(Component):
     def __init__(self, regit):
@@ -290,31 +378,32 @@ class Aux(Component):
         if sys.stdout.isatty():
             print(text, end='')
 
+    TYPES = {
+        'notice':   'white',
+        'success':  'green',
+        'warning':  'yellow',
+        'error':    'red',
+    }
+    COLORS = {
+        'normal':   '',
+        'white':    '\033[97m',
+        'cyan':     '\033[96m',
+        'magenta':  '\033[95m',
+        'blue':     '\033[94m',
+        'yellow':   '\033[93m',
+        'green':    '\033[92m',
+        'red':      '\033[91m',
+        'end':      '\033[0m',
+    }
+
     def colored(self, text, color, apply = None):
         if apply is None:
             apply = sys.stdout.isatty()
         if not apply:
             return text
-        types = {
-            'notice':   'white',
-            'success':  'green',
-            'warning':  'yellow',
-            'error':    'red',
-        }
-        colors = {
-            'normal':   '',
-            'white':    '\033[97m',
-            'cyan':     '\033[96m',
-            'magenta':  '\033[95m',
-            'blue':     '\033[94m',
-            'yellow':   '\033[93m',
-            'green':    '\033[92m',
-            'red':      '\033[91m',
-            'end':      '\033[0m',
-        }
-        if color in types:
-            color = types[color]
-        return colors[color] + text + colors['end']
+        if color in self.TYPES:
+            color = self.TYPES[color]
+        return self.COLORS[color] + text + self.COLORS['end']
 
 class ArgParser(Component):
     def __init__(self, regit):
@@ -340,7 +429,6 @@ class ArgParser(Component):
 
     def add_scan(self):
         parser = self.subparsers.add_parser('scan', help='recursively scan dirs for repos requiring attention')
-        parser.add_argument('path', nargs='?', action='store', type=str, default=os.getcwd(), help='directory to start from')
         parser.add_argument('-p', '--pull', action='store_const', dest='pull', const='pull', default='fetch', help='pull instead of fetch')
 
     def add_deps(self):
