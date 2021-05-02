@@ -330,7 +330,7 @@ class ArgParser(Component):
         self.parser.add_argument('-v', '--verbose', action='store_const', dest='verbose', const='',     default=False, help='be verbose')
         self.parser.add_argument('-C', '--start-path', nargs=1, help='start at given directory')
         self.parser.add_argument('-V', '--version', action='version', version='%(prog)s 0.0.1')
-        self.subparsers = self.parser.add_subparsers(required=False, dest='command', help='sub-command name')
+        self.subparsers = self.parser.add_subparsers(dest='command', help='sub-command name')
 
     def add_clone(self):
         parser = self.subparsers.add_parser('clone', help='clone a repository into a new directory')
