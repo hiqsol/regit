@@ -417,8 +417,9 @@ class ArgParser(Component):
         self.parser = MyArgumentParser(description="Repeated Git version 0.0.1")
         self.add_base()
         self.add_clone()
-        self.add_scan()
         self.add_deps()
+        self.add_scan()
+        self.add_self()
         self.add_up()
 
     def add_base(self):
@@ -433,13 +434,16 @@ class ArgParser(Component):
         parser.add_argument('repo', nargs=None, action='store', type=str, default='', help='repository url or name')
         parser.add_argument('path', nargs='?',  action='store', type=str, default='', help='path to clone to')
 
+    def add_deps(self):
+        parser = self.subparsers.add_parser('deps', help='update dependencies')
+
     def add_scan(self):
         parser = self.subparsers.add_parser('scan', help='recursively scan dirs for repos requiring attention')
         parser.add_argument('-b', '--skip-behind', action='store_const', dest='skip_behind', const=True, default=False, help="skip 'Your branch is behind'")
         parser.add_argument('-p', '--pull', action='store_const', dest='pull', const='pull', default='fetch', help='pull instead of fetch')
 
-    def add_deps(self):
-        parser = self.subparsers.add_parser('deps', help='update dependencies')
+    def add_self(self):
+        parser = self.subparsers.add_parser('self', help='update itself to the latest version')
 
     def add_up(self):
         parser = self.subparsers.add_parser('up', help='update current repo and dependencies')
