@@ -19,7 +19,7 @@ class ReGit:
         self.args, extras = res
         command = self.args.command
         if not isinstance(command, str) or command.startswith('_'):
-            return self.help()
+            return self.git.execvp()
         if command in dir(ReGit):
             if self.args.start_path:
                 os.chdir(self.args.start_path)
