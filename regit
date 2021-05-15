@@ -251,6 +251,10 @@ class Config(Component):
             data = self.read_file(path)
             if 'repos' in data:
                 self.repos.update(data['repos'])
+            if 'known-repos' in data:
+                self.knownRepos.update(data['known-repos'])
+            if 'known-sources' in data:
+                self.knownSources.update(data['known-sources'])
 
     def read_file(self, path):
         with open(path) as file:
