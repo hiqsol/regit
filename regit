@@ -120,21 +120,11 @@ class Cloner(Component):
 
         cwd = os.getcwd()
         tmp = tempfile.mkdtemp()
-        rep = tempfile.mkdtemp()
 
-        self.aux.system('find {cwd} -mindepth 1 -maxdepth 1 -exec mv -t {tmp} -- {{}} +'.format(cwd=cwd, tmp=tmp))
-        try:
-            result = self.git.clone(repo, rep)
-        except Exception:
-            result = 'failed'
-
-        self.rsync_move(rep, cwd)
-        self.aux.system('rm -rf {rep}'.format(rep=rep))
-        if self.rsync_move(tmp, cwd):
-            self.aux.warning('there was error so original dir has been kept in ' + tmp)
-        else:
-            self.aux.system('rm -rf {tmp}'.format(tmp=tmp))
-        return result
+        result = self.git.clone(repo, tmp)
+        if result:
+            return result
+        return self.aux.system('rsync -a --ignore-existing {tmp}/ {cwd}/'.format(tmp=tmp, cwd=cwd))
 
 class Scaner(Component):
     WINDMILL = ['-', '\\', '|', '/']
