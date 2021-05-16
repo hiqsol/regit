@@ -333,7 +333,8 @@ class Config(Component):
 
     @property
     def defaultSource(self):
-        return list(self.knownSources.values())[0]
+        sources = self.knownSources.values()
+        return next(iter(sources), 'git@github.com:')
 
 class Git(Component):
     def do(self, command):
