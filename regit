@@ -193,7 +193,7 @@ class Scaner(Component):
             return
         if args.force or status.startswith(self.FETCHES):
             quiet = '' if args.verbose else ' --quiet'
-            self.git.do(args.pull + quiet)
+            self.git.do(args.pull + quiet, True)
             status = self.check_status()
             if status is None:
                 return
@@ -327,8 +327,8 @@ class Config(Component):
         return next(iter(sources), 'git@github.com:')
 
 class Git(Component):
-    def do(self, command):
-        return self.aux.system('git ' + command)
+    def do(self, command, quiet = False):
+        return self.aux.system('git ' + command, quiet)
 
     def clone(self, repo, path):
         repo = self.config.path2repo_or_die(repo if repo else path)
@@ -349,8 +349,9 @@ class Aux(Component):
     def rsync_move(self, src, dst):
         return self.system('rsync -a --remove-source-files {src}/ {dst}/'.format(src=src, dst=dst))
 
-    def system(self, command):
-        self.notice('> ' + command.rstrip())
+    def system(self, command, quiet = False):
+        if not quiet:
+            self.notice('> ' + command.rstrip())
         result = os.system(command)
         if result:
             self.error('! failed')
