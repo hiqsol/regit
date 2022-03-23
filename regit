@@ -193,7 +193,7 @@ class Scaner(Component):
             return
         if args.force or status.startswith(self.FETCHES):
             quiet = '' if args.verbose else ' --quiet'
-            self.git.do(args.pull + quiet, True)
+            self.git.do(args.pull + quiet, not args.verbose)
             status = self.check_status()
             if status is None:
                 return
