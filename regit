@@ -46,6 +46,9 @@ class ReGit:
                 result = self.repeat.up(path)
         return result
 
+    def lclone(self):
+        self.config._defaultSource = self.config.defaultPrivateSource
+        return self.clone()
     def clone(self):
         return self.cloner.clone(self.args.repo, self.args.path)
 
@@ -323,8 +326,18 @@ class Config(Component):
 
     @property
     def defaultSource(self):
-        sources = self.knownSources.values()
-        return next(iter(sources), 'git@github.com:')
+        if not hasattr(self, '_defaultSource'):
+            setattr(self, '_defaultSource', self.defaultPublicSource)
+        return getattr(self, '_defaultSource')
+
+    @property
+    def defaultPublicSource(self):
+        return self.knownSources.get('public',
+            self.knownSources.get('github', 'git@github.com:'))
+    @property
+    def defaultPrivateSource(self):
+        return self.knownSources.get('private',
+            self.knownSources.get('gitlab', 'git@gitlab.com:'))
 
 class Git(Component):
     def do(self, command, quiet = False):
@@ -412,7 +425,8 @@ class ArgParser(Component):
         self.regit = regit
         self.parser = MyArgumentParser(description="Repeated Git version 0.0.1")
         self.add_base()
-        self.add_clone()
+        self.add_clone('clone')
+        self.add_clone('lclone')
         self.add_deps()
         self.add_scan()
         self.add_self()
@@ -425,8 +439,8 @@ class ArgParser(Component):
         self.parser.add_argument('-V', '--version', action='version', version='%(prog)s 0.0.1')
         self.subparsers = self.parser.add_subparsers(dest='command', help='sub-command name')
 
-    def add_clone(self):
-        parser = self.subparsers.add_parser('clone', help='clone a repository into a new directory')
+    def add_clone(self, name):
+        parser = self.subparsers.add_parser(name, help='clone a repository into a new directory')
         parser.add_argument('repo', nargs=None, action='store', type=str, default='', help='repository url or name')
         parser.add_argument('path', nargs='?',  action='store', type=str, default='', help='path to clone to')
 
