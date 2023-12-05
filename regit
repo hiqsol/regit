@@ -5,6 +5,7 @@ import re
 import sys
 import tempfile
 import argparse
+import subprocess
 from collections import OrderedDict
 from pprint import pprint
 
@@ -55,6 +56,12 @@ class ReGit:
     def scan(self):
         return self.scaner.scan()
 
+    def sync(self):
+        if not self.args.path:
+            self.parser.subparsers.choices['sync'].print_help()
+            return None
+        return self.syncer.sync(self.args.path)
+
     def _getProp(self, name, klass):
         if not hasattr(self, name):
             setattr(self, name, klass(self))
@@ -70,6 +77,8 @@ class ReGit:
     def cloner(self): return self._getProp('_cloner', Cloner)
     @property
     def scaner(self): return self._getProp('_scaner', Scaner)
+    @property
+    def syncer(self): return self._getProp('_syncer', Syncer)
     @property
     def parser(self): return self._getProp('_parser', ArgParser)
     @property
@@ -214,6 +223,15 @@ class Scaner(Component):
         if status.startswith('# '):
             status = status[2:]
         return status.startswith(self.SKIPS)
+
+class Syncer(Component):
+    def sync(self, dest):
+        changed = subprocess.check_output(['git', 'diff', '--name-only']).decode('utf-8').strip().split('\n')
+        untrakd = subprocess.check_output(['git', 'ls-files', '--others', '--exclude-standard']).decode('utf-8').strip().split('\n')
+        files = '\n\t'.join(filter(None, changed + untrakd))
+        if not files:
+            return None
+        return self.aux.system(f'echo "\n\t{files}\n" | cut -c2- | rsync -a --files-from=- . {dest}')
 
 class Config(Component):
     def __init__(self, regit):
@@ -429,6 +447,7 @@ class ArgParser(Component):
         self.add_clone('lclone')
         self.add_deps()
         self.add_scan()
+        self.add_sync()
         self.add_self()
         self.add_up()
 
@@ -451,6 +470,10 @@ class ArgParser(Component):
         parser = self.subparsers.add_parser('scan', help='recursively scan dirs for repos requiring attention')
         parser.add_argument('-b', '--skip-behind', action='store_const', dest='skip_behind', const=True, default=False, help="skip 'Your branch is behind'")
         parser.add_argument('-p', '--pull', action='store_const', dest='pull', const='pull', default='fetch', help='pull instead of fetch')
+
+    def add_sync(self):
+        parser = self.subparsers.add_parser('sync', help='rsync only git changed and untracked files to given path')
+        parser.add_argument('path', action='store', type=str, help='path to rsync to')
 
     def add_self(self):
         parser = self.subparsers.add_parser('self', help='update itself to the latest version')
