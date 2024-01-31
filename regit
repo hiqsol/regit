@@ -254,7 +254,7 @@ class Config(Component):
             if 'known-sources' in data:
                 self.knownSources.update(data['known-sources'])
             if 'includes' in data:
-                for name,file in data['includes'].items():
+                for _,file in data['includes'].items():
                     self.load_global(file)
 
     def load_local(self, path):
@@ -268,7 +268,7 @@ class Config(Component):
                 self.knownSources.update(data['known-sources'])
 
     def read_file(self, path):
-        with open(path) as file:
+        with open(path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
         section = ''
         result = {}
@@ -276,13 +276,13 @@ class Config(Component):
             line = line.strip()
             if not line:
                 continue
-            check = re.search('^\[(.+)\]$', line)
+            check = re.search(r'^\[(.+)\]$', line)
             if check:
                 section = check.group(1)
                 if not section in result:
                     result[section] = {}
                 continue
-            check = re.search('^\s*(\S+)\s*=\s*(.+)\s*$', line)
+            check = re.search(r'^\s*(\S+)\s*=\s*(.+)\s*$', line)
             if check:
                 result[section][check.group(1)] = check.group(2)
                 continue
