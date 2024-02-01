@@ -237,6 +237,7 @@ class Config(Component):
     def __init__(self, regit):
         Component.__init__(self, regit)
         self.repos = {}
+        self.aliases = {}
         self.knownRepos = {}
         self.knownSources = {}
         self.load()
@@ -249,6 +250,8 @@ class Config(Component):
         path = os.path.expanduser(path)
         if os.path.exists(path):
             data = self.read_file(path)
+            if 'aliases' in data:
+                self.aliases.update(data['aliases'])
             if 'known-repos' in data:
                 self.knownRepos.update(data['known-repos'])
             if 'known-sources' in data:
@@ -262,6 +265,8 @@ class Config(Component):
             data = self.read_file(path)
             if 'repos' in data:
                 self.repos.update(data['repos'])
+            if 'aliases' in data:
+                self.aliases.update(data['aliases'])
             if 'known-repos' in data:
                 self.knownRepos.update(data['known-repos'])
             if 'known-sources' in data:
@@ -282,7 +287,7 @@ class Config(Component):
                 if not section in result:
                     result[section] = {}
                 continue
-            check = re.search(r'^\s*(\S+)\s*=\s*(.+)\s*$', line)
+            check = re.search(r'^\s*(.+?)\s*=\s*(.+)\s*$', line)
             if check:
                 result[section][check.group(1)] = check.group(2)
                 continue
@@ -369,9 +374,20 @@ class Git(Component):
         return self.do('-C {} pull --rebase'.format(path))
 
     def execvp(self):
-        args = sys.argv
+        args = self.substituteAliases(sys.argv)
         args[0] = 'git'
         os.execvp('git', args)
+
+    def substituteAliases(self, args):
+        result = args
+        for alias,value in self.config.aliases.items():
+            parts = alias.split(' ')
+            given = ' '.join(args[1:len(parts)+1])
+            if given == alias:
+                for i,part in enumerate(value.split(' ')):
+                    result[i+1] = part
+                return result
+        return args
 
 class Aux(Component):
     def do_regit(self, command):
