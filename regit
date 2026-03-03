@@ -478,7 +478,7 @@ class Git(Component):
 
 class Aux(Component):
     def do_regit(self, command):
-        return self.system(__file__ + " " + command)
+        return self.system(os.path.realpath(__file__) + " " + command)
 
     def system(self, command, quiet=False):
         if not quiet:
