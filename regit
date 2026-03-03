@@ -220,12 +220,23 @@ class Scaner(Component):
         return stats
 
     def output_stats(self, stats):
-        max = 1
+        cols = self.terminal_width()
+        maxlen = 1
         for dir in stats:
-            if len(dir) > max:
-                max = len(dir)
+            if len(dir) > maxlen:
+                maxlen = len(dir)
         for dir in stats:
-            print("{dir} - {status}".format(status=self.aux.colored(stats[dir], "yellow"), dir=dir.ljust(max)))
+            status = stats[dir]
+            avail = cols - maxlen - 3  # " - " separator
+            if avail > 0 and len(status) > avail:
+                status = status[:avail - 3] + "..."
+            print("{} - {}".format(dir.ljust(maxlen), self.aux.colored(status, "yellow")))
+
+    def terminal_width(self):
+        try:
+            return os.get_terminal_size().columns
+        except (AttributeError, ValueError, OSError):
+            return 120
 
     def check(self, dir):
         args = self.regit.args
@@ -252,8 +263,21 @@ class Scaner(Component):
         for line in os.popen("git status").readlines():
             status = line.strip()
             if status and not self.is_skippable(status):
-                return status.strip(".,:")
+                status = status.strip(".,:")
+                if status == "Untracked files":
+                    files = self.list_untracked()
+                    if files:
+                        return "untracked: " + " ".join(files)
+                return status
         return None
+
+    def list_untracked(self):
+        output = subprocess.check_output(
+            ["git", "ls-files", "--others", "--exclude-standard"]
+        ).decode("utf-8").strip()
+        if not output:
+            return []
+        return output.split("\n")
 
     def is_skippable(self, status):
         if status.startswith("# "):
