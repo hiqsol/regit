@@ -1,6 +1,4 @@
-# reGit
-
-**Repeated Git**
+# reGit - Repeated Git
 
 [![GitHub version](https://badge.fury.io/gh/hiqsol%2Fregit.svg)](https://badge.fury.io/gh/hiqsol%2Fregit)
 [![Scrutinizer Code Coverage](https://img.shields.io/scrutinizer/coverage/g/hiqsol/regit.svg)](https://scrutinizer-ci.com/g/hiqsol/regit/)
@@ -11,7 +9,7 @@ Wraps git with several useful features:
 - up - pull current repo and all the dependencies
 - all - TODO repeat command for current repo and all dependencies
 - scan - scan directory tree recursively to find unsynced repositories
-- clone - clone with url resolution
+- clone - clone with URL resolution
 
 ## Installation
 
@@ -50,4 +48,4 @@ There are lots of them. Maybe you could find something more suitable for your ne
 This project is released under the terms of the BSD-3-Clause [license](LICENSE).
 Read more [here](http://choosealicense.com/licenses/bsd-3-clause).
 
-Copyright © 2021-2024, Andrii Vasyliev (sol@solex.me)
+Copyright © 2021-2026, Andrii Vasyliev (<sol@solex.me>)

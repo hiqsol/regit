@@ -7,7 +7,7 @@ import tempfile
 import argparse
 import subprocess
 from collections import OrderedDict
-from pprint import pprint
+
 
 class ReGit:
     def __init__(self):
@@ -19,7 +19,7 @@ class ReGit:
             return self.git.execvp()
         self.args, extras = res
         command = self.args.command
-        if not isinstance(command, str) or command.startswith('_'):
+        if not isinstance(command, str) or command.startswith("_"):
             return self.git.execvp()
         if command in dir(ReGit):
             if self.args.start_path:
@@ -34,7 +34,7 @@ class ReGit:
         return self.git.pull(os.path.dirname(__file__))
 
     def up(self):
-        err_pull = self.git.do('pull --rebase')
+        err_pull = self.git.do("pull --rebase")
         err_deps = self.deps()
         return err_pull if err_pull else err_deps
 
@@ -42,7 +42,7 @@ class ReGit:
         result = 0
         for path in self.config.repos:
             if not os.path.exists(path):
-                result = self.git.clone('', path)
+                result = self.git.clone("", path)
             else:
                 result = self.repeat.up(path)
         return result
@@ -50,6 +50,7 @@ class ReGit:
     def lclone(self):
         self.config._defaultSource = self.config.defaultPrivateSource
         return self.clone()
+
     def clone(self):
         return self.cloner.clone(self.args.repo, self.args.path)
 
@@ -58,7 +59,7 @@ class ReGit:
 
     def sync(self):
         if not self.args.path:
-            self.parser.subparsers.choices['sync'].print_help()
+            self.parser.subparsers.choices["sync"].print_help()
             return None
         return self.syncer.sync(self.args.path)
 
@@ -68,46 +69,70 @@ class ReGit:
         return getattr(self, name)
 
     @property
-    def aux(self): return self._getProp('_aux', Aux)
+    def aux(self):
+        return self._getProp("_aux", Aux)
+
     @property
-    def git(self): return self._getProp('_git', Git)
+    def git(self):
+        return self._getProp("_git", Git)
+
     @property
-    def config(self): return self._getProp('_config', Config)
+    def config(self):
+        return self._getProp("_config", Config)
+
     @property
-    def cloner(self): return self._getProp('_cloner', Cloner)
+    def cloner(self):
+        return self._getProp("_cloner", Cloner)
+
     @property
-    def scaner(self): return self._getProp('_scaner', Scaner)
+    def scaner(self):
+        return self._getProp("_scaner", Scaner)
+
     @property
-    def syncer(self): return self._getProp('_syncer', Syncer)
+    def syncer(self):
+        return self._getProp("_syncer", Syncer)
+
     @property
-    def parser(self): return self._getProp('_parser', ArgParser)
+    def parser(self):
+        return self._getProp("_parser", ArgParser)
+
     @property
-    def repeat(self): return self._getProp('_repeat', Repeat)
+    def repeat(self):
+        return self._getProp("_repeat", Repeat)
+
 
 class Component:
     def __init__(self, regit):
         self.regit = regit
 
     @property
-    def aux(self): return self.regit.aux
+    def aux(self):
+        return self.regit.aux
+
     @property
-    def git(self): return self.regit.git
+    def git(self):
+        return self.regit.git
+
     @property
-    def config(self): return self.regit.config
+    def config(self):
+        return self.regit.config
+
     @property
-    def repeat(self): return self.regit.repeat
+    def repeat(self):
+        return self.regit.repeat
+
 
 class Repeat(Component):
     def up(self, path):
-        return self.do('up', path)
+        return self.do("up", path)
 
     def deps(self, path):
-        return self.do('deps', path)
+        return self.do("deps", path)
 
     def do(self, command, path):
         if not path:
-            self.aux.die('path not given for up_in_dir')
-        if path == '.':
+            self.aux.die("path not given for up_in_dir")
+        if path == ".":
             return self.aux.do_regit(command)
         cwd = os.getcwd()
         os.chdir(path)
@@ -116,9 +141,10 @@ class Repeat(Component):
         os.chdir(cwd)
         return result
 
+
 class Cloner(Component):
     def clone(self, repo, path):
-        if path == '.':
+        if path == ".":
             result = self.clone2dot(repo)
         else:
             result = self.git.clone(repo, path)
@@ -127,8 +153,8 @@ class Cloner(Component):
         return self.repeat.deps(path if path else self.config.repo2path(repo))
 
     def clone2dot(self, repo):
-        if os.path.exists('.git'):
-            self.aux.die('git repository already exists in ' + os.getcwd())
+        if os.path.exists(".git"):
+            self.aux.die("git repository already exists in " + os.getcwd())
 
         cwd = os.getcwd()
         tmp = tempfile.mkdtemp()
@@ -136,23 +162,24 @@ class Cloner(Component):
         result = self.git.clone(repo, tmp)
         if result:
             return result
-        return self.aux.system('rsync -a --ignore-existing {tmp}/ {cwd}/'.format(tmp=tmp, cwd=cwd))
+        return self.aux.system("rsync -a --ignore-existing {tmp}/ {cwd}/".format(tmp=tmp, cwd=cwd))
+
 
 class Scaner(Component):
-    WINDMILL = ['-', '\\', '|', '/']
-    GREETING = 'Scanning repos... '
+    WINDMILL = ["-", "\\", "|", "/"]
+    GREETING = "Scanning repos... "
     SKIPS = (
-        'On branch',
-        'HEAD detached',
-        'Your branch is up-to-date',
-        'Your branch is up to date',
-        'nothing to commit, working directory clean',
-        'nothing to commit, working tree clean',
+        "On branch",
+        "HEAD detached",
+        "Your branch is up-to-date",
+        "Your branch is up to date",
+        "nothing to commit, working directory clean",
+        "nothing to commit, working tree clean",
     )
-    BEHIND = 'Your branch is behind'
+    BEHIND = "Your branch is behind"
     FETCHES = (
-        'Your branch is ahead',
-        'Your branch is behind',
+        "Your branch is ahead",
+        "Your branch is behind",
     )
 
     def scan(self):
@@ -164,7 +191,7 @@ class Scaner(Component):
     def find_repos(self):
         self.aux.tprint(self.GREETING)
         sys.stdout.flush()
-        raws = os.popen('find . -name .git').readlines()
+        raws = os.popen("find . -name .git").readlines()
         return sorted(raws)
 
     def check_repos(self, repos):
@@ -172,28 +199,28 @@ class Scaner(Component):
         no = 0
         prev = self.GREETING
         for dir in repos:
-            dir = self.dir + '/' + dir[2:-6]
-            msg = self.WINDMILL[no % 4] + ' ' + dir
-            self.aux.tprint('\b' * 300)
+            dir = self.dir + "/" + dir[2:-6]
+            msg = self.WINDMILL[no % 4] + " " + dir
+            self.aux.tprint("\b" * 300)
             self.aux.tprint(msg.ljust(len(prev)))
             prev = msg
             no += 1
             status = self.check(dir)
             if status:
                 stats[dir] = status
-        self.aux.tprint('\r')
-        self.aux.tprint(''.ljust(len(prev))) # cleans string with spaces
-        self.aux.tprint('\b' * 300)
-        self.aux.tprint('\r')
+        self.aux.tprint("\r")
+        self.aux.tprint("".ljust(len(prev)))  # cleans string with spaces
+        self.aux.tprint("\b" * 300)
+        self.aux.tprint("\r")
         return stats
 
     def output_stats(self, stats):
         max = 1
         for dir in stats:
-            if len(dir)>max:
+            if len(dir) > max:
                 max = len(dir)
         for dir in stats:
-            print("{dir} - {status}".format(status=self.aux.colored(stats[dir], 'yellow'), dir=dir.ljust(max)))
+            print("{dir} - {status}".format(status=self.aux.colored(stats[dir], "yellow"), dir=dir.ljust(max)))
 
     def check(self, dir):
         args = self.regit.args
@@ -204,7 +231,7 @@ class Scaner(Component):
         if args.skip_behind and status.startswith(self.BEHIND):
             return
         if args.force or status.startswith(self.FETCHES):
-            quiet = '' if args.verbose else ' --quiet'
+            quiet = "" if args.verbose else " --quiet"
             self.git.do(args.pull + quiet, not args.verbose)
             status = self.check_status()
             if status is None:
@@ -213,25 +240,27 @@ class Scaner(Component):
 
     def check_status(self):
         status = None
-        for line in os.popen('git status').readlines():
+        for line in os.popen("git status").readlines():
             status = line.strip()
             if status and not self.is_skippable(status):
-                return status.strip('.,:')
+                return status.strip(".,:")
         return None
 
     def is_skippable(self, status):
-        if status.startswith('# '):
+        if status.startswith("# "):
             status = status[2:]
         return status.startswith(self.SKIPS)
 
+
 class Syncer(Component):
     def sync(self, dest):
-        changed = subprocess.check_output(['git', 'diff', '--name-only']).decode('utf-8').strip().split('\n')
-        untrakd = subprocess.check_output(['git', 'ls-files', '--others', '--exclude-standard']).decode('utf-8').strip().split('\n')
-        files = '\n\t'.join(filter(None, changed + untrakd))
+        changed = subprocess.check_output(["git", "diff", "--name-only"]).decode("utf-8").strip().split("\n")
+        untrakd = subprocess.check_output(["git", "ls-files", "--others", "--exclude-standard"]).decode("utf-8").strip().split("\n")
+        files = "\n\t".join(filter(None, changed + untrakd))
         if not files:
             return None
         return self.aux.system(f'echo "\n\t{files}\n" | cut -c2- | rsync -a --files-from=- . {dest}')
+
 
 class Config(Component):
     def __init__(self, regit):
@@ -243,51 +272,51 @@ class Config(Component):
         self.load()
 
     def load(self):
-        self.load_global('~/.config/regit/config')
-        self.load_local('.regit')
+        self.load_global("~/.config/regit/config")
+        self.load_local(".regit")
 
     def load_global(self, path):
         path = os.path.expanduser(path)
         if os.path.exists(path):
             data = self.read_file(path)
-            if 'aliases' in data:
-                self.aliases.update(data['aliases'])
-            if 'known-repos' in data:
-                self.knownRepos.update(data['known-repos'])
-            if 'known-sources' in data:
-                self.knownSources.update(data['known-sources'])
-            if 'includes' in data:
-                for _,file in data['includes'].items():
+            if "aliases" in data:
+                self.aliases.update(data["aliases"])
+            if "known-repos" in data:
+                self.knownRepos.update(data["known-repos"])
+            if "known-sources" in data:
+                self.knownSources.update(data["known-sources"])
+            if "includes" in data:
+                for _, file in data["includes"].items():
                     self.load_global(file)
 
     def load_local(self, path):
         if os.path.exists(path):
             data = self.read_file(path)
-            if 'repos' in data:
-                self.repos.update(data['repos'])
-            if 'aliases' in data:
-                self.aliases.update(data['aliases'])
-            if 'known-repos' in data:
-                self.knownRepos.update(data['known-repos'])
-            if 'known-sources' in data:
-                self.knownSources.update(data['known-sources'])
+            if "repos" in data:
+                self.repos.update(data["repos"])
+            if "aliases" in data:
+                self.aliases.update(data["aliases"])
+            if "known-repos" in data:
+                self.knownRepos.update(data["known-repos"])
+            if "known-sources" in data:
+                self.knownSources.update(data["known-sources"])
 
     def read_file(self, path):
-        with open(path, 'r', encoding='utf-8') as file:
+        with open(path, "r", encoding="utf-8") as file:
             lines = file.readlines()
-        section = ''
+        section = ""
         result = {}
         for line in lines:
             line = line.strip()
             if not line:
                 continue
-            check = re.search(r'^\[(.+)\]$', line)
+            check = re.search(r"^\[(.+)\]$", line)
             if check:
                 section = check.group(1)
                 if not section in result:
                     result[section] = {}
                 continue
-            check = re.search(r'^\s*(.+?)\s*=\s*(.+)\s*$', line)
+            check = re.search(r"^\s*(.+?)\s*=\s*(.+)\s*$", line)
             if check:
                 result[section][check.group(1)] = check.group(2)
                 continue
@@ -303,8 +332,8 @@ class Config(Component):
         if repo:
             return repo
         parts = path.split(os.path.sep)
-        if len(parts)<2:
-            path = os.path.basename(os.getcwd()) + '/' + path
+        if len(parts) < 2:
+            path = os.path.basename(os.getcwd()) + "/" + path
         return self.config.defaultSource + path
 
     def repath2repo(self, path):
@@ -326,8 +355,8 @@ class Config(Component):
             return repo
         if not path in self.knownRepos:
             parts = path.split(os.path.sep)
-            if len(parts)<2:
-                return ''
+            if len(parts) < 2:
+                return ""
             parts.pop(0)
             return self.path2repo(os.path.sep.join(parts))
         return self.knownRepos[path]
@@ -342,125 +371,127 @@ class Config(Component):
         return self.knownSources[source] + check.group(2)
 
     def is_repo_with_source(self, path):
-        return re.match('^([\w.-]+):([\w.-]+/?[\w.-]*)$', path)
+        return re.match("^([\w.-]+):([\w.-]+/?[\w.-]*)$", path)
 
     def is_repo_url(self, repo):
-        return ':' in repo or '@' in repo
+        return ":" in repo or "@" in repo
 
     @property
     def defaultSource(self):
-        if not hasattr(self, '_defaultSource'):
-            setattr(self, '_defaultSource', self.defaultPublicSource)
-        return getattr(self, '_defaultSource')
+        if not hasattr(self, "_defaultSource"):
+            setattr(self, "_defaultSource", self.defaultPublicSource)
+        return getattr(self, "_defaultSource")
 
     @property
     def defaultPublicSource(self):
-        return self.knownSources.get('public',
-            self.knownSources.get('github', 'git@github.com:'))
+        return self.knownSources.get("public", self.knownSources.get("github", "git@github.com:"))
+
     @property
     def defaultPrivateSource(self):
-        return self.knownSources.get('private',
-            self.knownSources.get('gitlab', 'git@gitlab.com:'))
+        return self.knownSources.get("private", self.knownSources.get("gitlab", "git@gitlab.com:"))
+
 
 class Git(Component):
-    def do(self, command, quiet = False):
-        return self.aux.system('git ' + command, quiet)
+    def do(self, command, quiet=False):
+        return self.aux.system("git " + command, quiet)
 
     def clone(self, repo, path):
         repo = self.config.path2repo_or_die(repo if repo else path)
-        return self.do('clone {} {}'.format(repo, path))
+        return self.do("clone {} {}".format(repo, path))
 
     def pull(self, path):
-        return self.do('-C {} pull --rebase'.format(path))
+        return self.do("-C {} pull --rebase".format(path))
 
     def execvp(self):
         args = self.substituteAliases(sys.argv)
-        args[0] = 'git'
-        os.execvp('git', args)
+        args[0] = "git"
+        os.execvp("git", args)
 
     def substituteAliases(self, args):
         result = args
-        for alias,value in self.config.aliases.items():
-            parts = alias.split(' ')
-            given = ' '.join(args[1:len(parts)+1])
+        for alias, value in self.config.aliases.items():
+            parts = alias.split(" ")
+            given = " ".join(args[1 : len(parts) + 1])
             if given == alias:
-                for i,part in enumerate(value.split(' ')):
-                    result[i+1] = part
+                for i, part in enumerate(value.split(" ")):
+                    result[i + 1] = part
                 return result
         return args
 
+
 class Aux(Component):
     def do_regit(self, command):
-        return self.system(__file__ + ' ' + command)
+        return self.system(__file__ + " " + command)
 
     def rsync_move(self, src, dst):
-        return self.system('rsync -a --remove-source-files {src}/ {dst}/'.format(src=src, dst=dst))
+        return self.system("rsync -a --remove-source-files {src}/ {dst}/".format(src=src, dst=dst))
 
-    def system(self, command, quiet = False):
+    def system(self, command, quiet=False):
         if not quiet:
-            self.notice('> ' + command.rstrip())
+            self.notice("> " + command.rstrip())
         result = os.system(command)
         if result:
-            self.error('! failed')
+            self.error("! failed")
         return result
 
-    def die(self, text='die', color='error'):
+    def die(self, text="die", color="error"):
         self.error(text)
         raise Exception(text)
 
-    def error(self, text, color='error'):
+    def error(self, text, color="error"):
         print(self.colored(text, color))
 
-    def warning(self, text, color='warning'):
+    def warning(self, text, color="warning"):
         print(self.colored(text, color))
 
-    def notice(self, text, color='notice'):
+    def notice(self, text, color="notice"):
         print(self.colored(text, color))
 
     def which(self, binary):
-        return backtick('which ' + binary)
+        return backtick("which " + binary)
 
     def backtick(self, command):
         return os.popen(command).read().strip()
 
     def tprint(self, text):
         if sys.stdout.isatty():
-            print(text, end='')
+            print(text, end="")
 
     TYPES = {
-        'notice':   'white',
-        'success':  'green',
-        'warning':  'yellow',
-        'error':    'red',
+        "notice": "white",
+        "success": "green",
+        "warning": "yellow",
+        "error": "red",
     }
     COLORS = {
-        'normal':   '',
-        'white':    '\033[97m',
-        'cyan':     '\033[96m',
-        'magenta':  '\033[95m',
-        'blue':     '\033[94m',
-        'yellow':   '\033[93m',
-        'green':    '\033[92m',
-        'red':      '\033[91m',
-        'end':      '\033[0m',
+        "normal": "",
+        "white": "\033[97m",
+        "cyan": "\033[96m",
+        "magenta": "\033[95m",
+        "blue": "\033[94m",
+        "yellow": "\033[93m",
+        "green": "\033[92m",
+        "red": "\033[91m",
+        "end": "\033[0m",
     }
 
-    def colored(self, text, color, apply = None):
+    def colored(self, text, color, apply=None):
         if apply is None:
             apply = sys.stdout.isatty()
         if not apply:
             return text
         if color in self.TYPES:
             color = self.TYPES[color]
-        return self.COLORS[color] + text + self.COLORS['end']
+        return self.COLORS[color] + text + self.COLORS["end"]
+
 
 class ArgParser(Component):
     def __init__(self, regit):
         self.regit = regit
         self.parser = MyArgumentParser(description="Repeated Git version 0.0.1")
         self.add_base()
-        self.add_clone('clone')
-        self.add_clone('lclone')
+        self.add_clone("clone")
+        self.add_clone("lclone")
         self.add_deps()
         self.add_scan()
         self.add_sync()
@@ -468,34 +499,34 @@ class ArgParser(Component):
         self.add_up()
 
     def add_base(self):
-        self.parser.add_argument('-f', '--force',   action='store_const', dest='force',   const=True,   default=False, help='force')
-        self.parser.add_argument('-v', '--verbose', action='store_const', dest='verbose', const='',     default=False, help='be verbose')
-        self.parser.add_argument('-C', dest='start_path', help='start at given directory')
-        self.parser.add_argument('-V', '--version', action='version', version='%(prog)s 0.0.1')
-        self.subparsers = self.parser.add_subparsers(dest='command', help='sub-command name')
+        self.parser.add_argument("-f", "--force", action="store_const", dest="force", const=True, default=False, help="force")
+        self.parser.add_argument("-v", "--verbose", action="store_const", dest="verbose", const="", default=False, help="be verbose")
+        self.parser.add_argument("-C", dest="start_path", help="start at given directory")
+        self.parser.add_argument("-V", "--version", action="version", version="%(prog)s 0.0.1")
+        self.subparsers = self.parser.add_subparsers(dest="command", help="sub-command name")
 
     def add_clone(self, name):
-        parser = self.subparsers.add_parser(name, help='clone a repository into a new directory')
-        parser.add_argument('repo', nargs=None, action='store', type=str, default='', help='repository url or name')
-        parser.add_argument('path', nargs='?',  action='store', type=str, default='', help='path to clone to')
+        parser = self.subparsers.add_parser(name, help="clone a repository into a new directory")
+        parser.add_argument("repo", nargs=None, action="store", type=str, default="", help="repository url or name")
+        parser.add_argument("path", nargs="?", action="store", type=str, default="", help="path to clone to")
 
     def add_deps(self):
-        parser = self.subparsers.add_parser('deps', help='update dependencies')
+        parser = self.subparsers.add_parser("deps", help="update dependencies")
 
     def add_scan(self):
-        parser = self.subparsers.add_parser('scan', help='recursively scan dirs for repos requiring attention')
-        parser.add_argument('-b', '--skip-behind', action='store_const', dest='skip_behind', const=True, default=False, help="skip 'Your branch is behind'")
-        parser.add_argument('-p', '--pull', action='store_const', dest='pull', const='pull', default='fetch', help='pull instead of fetch')
+        parser = self.subparsers.add_parser("scan", help="recursively scan dirs for repos requiring attention")
+        parser.add_argument("-b", "--skip-behind", action="store_const", dest="skip_behind", const=True, default=False, help="skip 'Your branch is behind'")
+        parser.add_argument("-p", "--pull", action="store_const", dest="pull", const="pull", default="fetch", help="pull instead of fetch")
 
     def add_sync(self):
-        parser = self.subparsers.add_parser('sync', help='rsync only git changed and untracked files to given path')
-        parser.add_argument('path', action='store', type=str, help='path to rsync to')
+        parser = self.subparsers.add_parser("sync", help="rsync only git changed and untracked files to given path")
+        parser.add_argument("path", action="store", type=str, help="path to rsync to")
 
     def add_self(self):
-        parser = self.subparsers.add_parser('self', help='update itself to the latest version')
+        parser = self.subparsers.add_parser("self", help="update itself to the latest version")
 
     def add_up(self):
-        parser = self.subparsers.add_parser('up', help='update current repo and dependencies')
+        parser = self.subparsers.add_parser("up", help="update current repo and dependencies")
 
     def parse_known_args(self):
         return self.parser.parse_known_args()
@@ -503,9 +534,11 @@ class ArgParser(Component):
     def print_help(self):
         return self.parser.print_help()
 
+
 class MyArgumentParser(argparse.ArgumentParser):
     def error(self, message):
         pass
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     ReGit()
