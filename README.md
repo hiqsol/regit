@@ -4,14 +4,17 @@
 [![Scrutinizer Code Coverage](https://img.shields.io/scrutinizer/coverage/g/hiqsol/regit.svg)](https://scrutinizer-ci.com/g/hiqsol/regit/)
 [![Scrutinizer Code Quality](https://img.shields.io/scrutinizer/g/hiqsol/regit.svg)](https://scrutinizer-ci.com/g/hiqsol/regit/)
 
-Wraps git with several useful features:
+Git extensions for managing multiple repositories:
 
-- up - pull current repo and all the dependencies
-- scan - scan directory tree recursively to find unsynced repositories
-- clone - clone with URL resolution
-- lclone - clone using private source (GitLab by default)
-- sync - rsync only changed and untracked files to a given destination
-- self - update regit itself to the latest version
+- `git up` - pull current repo and all the dependencies
+- `git scan` - scan directory tree recursively to find unsynced repos
+- `git grab` - clone with URL resolution
+- `git lgrab` - clone using private source (GitLab by default)
+- `git sync` - rsync only changed and untracked files to a given destination
+- `git deps` - update dependencies
+
+Also available as `regit up`, `regit scan`, etc.
+Update regit itself with `regit self`.
 
 ## Installation
 
@@ -20,23 +23,30 @@ Single Python 3 executable, no dependencies.
 ```sh
 git clone https://github.com/hiqsol/regit.git ~/.local/share/regit
 ln -s ~/.local/share/regit/regit ~/.local/bin/regit
+regit install
 ```
 
 Make sure `~/.local/bin` is in your `PATH`.
-Then update anytime with `regit self`.
+
+`regit install` creates `git-*` symlinks so commands work as
+`git up`, `git scan`, etc.
+Update anytime with `regit self`.
+
+To remove the symlinks: `regit uninstall`.
 
 ## Alternatives
 
-I've really tried and spent lot of time looking for already existing tool for the job.
-There are lots of them. Maybe you could find something more suitable for your needs.
+I've really tried and spent lot of time looking for already existing
+tool for the job. There are lots of them. Maybe you could find something
+more suitable for your needs.
 
-- [repo]:       helps manage many Git repositories, specialized for Android development (Python)
+- [repo]:       helps manage many Git repositories (Python)
 - [gita]:       manage multiple git repos in home (Python)
 - [myrepos]:    manage all your version control repos (Perl)
-- [gitbatch]:   text-based UI to manage multiple git repos in one place (Go)
+- [gitbatch]:   text-based UI to manage multiple git repos (Go)
 - [git-plus]:   run commands in multiple git repos (Python)
 - [mu-repo]:    help working with multiple git repos (Python)
-- [mugit]:      managing a workspace containing multiple git repositories (Python)
+- [mugit]:      managing multiple git repositories (Python)
 - [gr]:         managing multiple git repositories (JavaScript)
 - [mgit]:       layered git repositories (Shell)
 
@@ -52,7 +62,8 @@ There are lots of them. Maybe you could find something more suitable for your ne
 
 ## License
 
-This project is released under the terms of the BSD-3-Clause [license](LICENSE).
+This project is released under the terms of the BSD-3-Clause
+[license](LICENSE).
 Read more [here](http://choosealicense.com/licenses/bsd-3-clause).
 
 Copyright © 2021-2026, Andrii Vasyliev (<sol@solex.me>)
