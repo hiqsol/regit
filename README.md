@@ -8,7 +8,7 @@ Git extensions for managing multiple repositories:
 
 - `git up` - pull current repo and all the dependencies
 - `git scan` - scan directory tree recursively to find unsynced repos
-- `git grab` - clone with URL resolution
+- `git grab` - clone with URL resolution and extra modes
 - `git lgrab` - clone using private source (GitLab by default)
 - `git sync` - rsync only changed and untracked files to a given destination
 - `git deps` - update dependencies
@@ -33,6 +33,30 @@ Make sure `~/.local/bin` is in your `PATH`.
 Update anytime with `regit self`.
 
 To remove the symlinks: `regit uninstall`.
+
+## git grab
+
+`git grab` extends `git clone` with URL resolution from
+`~/.config/regit/config` and two special clone modes:
+
+```sh
+git grab URL              # standard clone into auto-named directory
+git grab URL mydir        # standard clone into mydir
+git grab URL .            # clone into current directory (rsync files in)
+git grab URL .git         # clone only .git, no file checkout
+```
+
+`git grab URL .` clones to a temp directory and rsyncs files into the
+current directory without overwriting existing files. Useful when you
+already have some files in place.
+
+`git grab URL .git` clones with `--no-checkout` and moves only the
+`.git` directory into the current directory. No files are checked out.
+Useful when you already have the working files (e.g. deployed code)
+and want to add git tracking to inspect `git diff`, `git log`, etc.
+
+`git lgrab` works the same way but resolves URLs through the private
+source (GitLab by default).
 
 ## Alternatives
 

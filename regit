@@ -183,6 +183,8 @@ class Repeat(Component):
 
 class Cloner(Component):
     def clone(self, repo, path):
+        if path == ".git":
+            return self.clone2git(repo)
         if path == ".":
             result = self.clone2dot(repo)
         else:
@@ -190,6 +192,22 @@ class Cloner(Component):
         if result:
             return result
         return self.repeat.deps(path if path else self.config.repo2path(repo))
+
+    def clone2git(self, repo):
+        if os.path.exists(".git"):
+            self.aux.die("git repository already exists in " + os.getcwd())
+
+        repo = self.config.path2repo_or_die(repo)
+        tmp = tempfile.mkdtemp()
+
+        try:
+            result = self.git.do("clone --no-checkout {} {}".format(repo, tmp))
+            if result:
+                return result
+            shutil.move(os.path.join(tmp, ".git"), ".git")
+            return 0
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
 
     def clone2dot(self, repo):
         if os.path.exists(".git"):
@@ -545,9 +563,9 @@ class ArgParser(Component):
         self.subparsers = self.parser.add_subparsers(dest="command", help="sub-command name")
 
     def add_clone(self, name):
-        parser = self.subparsers.add_parser(name, help="clone a repository into a new directory")
+        parser = self.subparsers.add_parser(name, help="clone with URL resolution (use . for cwd, .git for metadata only)")
         parser.add_argument("repo", help="repository url or name")
-        parser.add_argument("path", nargs="?", default="", help="path to clone to")
+        parser.add_argument("path", nargs="?", default="", help="path, '.' to rsync into cwd, '.git' for metadata only")
 
     def add_deps(self):
         self.subparsers.add_parser("deps", help="update dependencies")
