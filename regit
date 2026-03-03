@@ -95,7 +95,7 @@ class ReGit:
 
     def sync(self):
         if not self.args.path:
-            self.parser.subparsers.choices["sync"].print_help()
+            self.parser.print_subcommand_help("sync")
             return None
         return self.syncer.sync(self.args.path)
 
@@ -397,7 +397,7 @@ class Config(Component):
         parts = path.split(os.path.sep)
         if len(parts) < 2:
             path = os.path.basename(os.getcwd()) + "/" + path
-        return self.config.defaultSource + path
+        return self.defaultSource + path
 
     def repath2repo(self, path, _seen=None):
         if _seen is None:
@@ -538,9 +538,11 @@ class Aux(Component):
 
 
 class ArgParser(Component):
+    VERSION = "0.0.1"
+
     def __init__(self, regit):
         self.regit = regit
-        self.parser = MyArgumentParser(description="Repeated Git version 0.0.1")
+        self.parser = MyArgumentParser(description="Repeated Git version " + self.VERSION)
         self.add_base()
         self.add_clone("grab")
         self.add_clone("lgrab")
@@ -554,46 +556,49 @@ class ArgParser(Component):
 
     def add_base(self):
         self.parser.add_argument("-C", dest="start_path", help="start at given directory")
-        self.parser.add_argument("-V", "--version", action="version", version="%(prog)s 0.0.1")
+        self.parser.add_argument("-V", "--version", action="version", version="%(prog)s " + self.VERSION)
         self.subparsers = self.parser.add_subparsers(dest="command", help="sub-command name")
 
     def add_clone(self, name):
         parser = self.subparsers.add_parser(name, help="clone a repository into a new directory")
-        parser.add_argument("repo", nargs=None, action="store", type=str, default="", help="repository url or name")
-        parser.add_argument("path", nargs="?", action="store", type=str, default="", help="path to clone to")
+        parser.add_argument("repo", help="repository url or name")
+        parser.add_argument("path", nargs="?", default="", help="path to clone to")
 
     def add_deps(self):
-        parser = self.subparsers.add_parser("deps", help="update dependencies")
+        self.subparsers.add_parser("deps", help="update dependencies")
 
     def add_install(self):
-        parser = self.subparsers.add_parser("install", help="create git-* symlinks")
-        parser = self.subparsers.add_parser("uninstall", help="remove git-* symlinks")
+        self.subparsers.add_parser("install", help="create git-* symlinks")
+        self.subparsers.add_parser("uninstall", help="remove git-* symlinks")
 
     def add_scan(self):
         parser = self.subparsers.add_parser("scan", help="recursively scan dirs for repos requiring attention")
-        parser.add_argument("-f", "--force", action="store_const", dest="force", const=True, default=False, help="force")
-        parser.add_argument("-v", "--verbose", action="store_true", dest="verbose", default=False, help="be verbose")
-        parser.add_argument("-b", "--skip-behind", action="store_const", dest="skip_behind", const=True, default=False, help="skip 'Your branch is behind'")
-        parser.add_argument("-p", "--pull", action="store_const", dest="pull", const="pull", default="fetch", help="pull instead of fetch")
+        parser.add_argument("-f", "--force", action="store_true", help="force")
+        parser.add_argument("-v", "--verbose", action="store_true", help="be verbose")
+        parser.add_argument("-b", "--skip-behind", action="store_true", help="skip 'Your branch is behind'")
+        parser.add_argument("-p", "--pull", action="store_const", const="pull", default="fetch", help="pull instead of fetch")
 
     def add_sync(self):
         parser = self.subparsers.add_parser("sync", help="rsync only git changed and untracked files to given path")
-        parser.add_argument("path", action="store", type=str, help="path to rsync to")
+        parser.add_argument("path", help="path to rsync to")
 
     def add_self(self):
-        parser = self.subparsers.add_parser("self", help="update itself to the latest version")
+        self.subparsers.add_parser("self", help="update itself to the latest version")
 
     def add_up(self):
-        parser = self.subparsers.add_parser("up", help="update current repo and dependencies")
+        self.subparsers.add_parser("up", help="update current repo and dependencies")
 
     def add_help(self):
-        parser = self.subparsers.add_parser("help", help="show this help message")
+        self.subparsers.add_parser("help", help="show this help message")
 
     def parse_known_args(self):
         return self.parser.parse_known_args()
 
     def print_help(self):
         return self.parser.print_help()
+
+    def print_subcommand_help(self, name):
+        return self.subparsers.choices[name].print_help()
 
 
 class MyArgumentParser(argparse.ArgumentParser):
