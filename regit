@@ -7,7 +7,6 @@ import tempfile
 import argparse
 import shutil
 import subprocess
-from collections import OrderedDict
 
 
 class ReGit:
@@ -92,7 +91,7 @@ class ReGit:
         return self.cloner.clone(self.args.repo, self.args.path)
 
     def scan(self):
-        return self.scaner.scan()
+        return self.scanner.scan()
 
     def sync(self):
         if not self.args.path:
@@ -122,8 +121,8 @@ class ReGit:
         return self._getProp("_cloner", Cloner)
 
     @property
-    def scaner(self):
-        return self._getProp("_scaner", Scaner)
+    def scanner(self):
+        return self._getProp("_scanner", Scanner)
 
     @property
     def syncer(self):
@@ -206,7 +205,7 @@ class Cloner(Component):
             shutil.rmtree(tmp, ignore_errors=True)
 
 
-class Scaner(Component):
+class Scanner(Component):
     WINDMILL = ["-", "\\", "|", "/"]
     GREETING = "Scanning repos... "
     SKIPS = (
@@ -236,7 +235,7 @@ class Scaner(Component):
         return sorted(raws)
 
     def check_repos(self, repos):
-        stats = OrderedDict()
+        stats = {}
         no = 0
         prev = self.GREETING
         for dir in repos:
@@ -324,8 +323,8 @@ class Scaner(Component):
 class Syncer(Component):
     def sync(self, dest):
         changed = subprocess.check_output(["git", "diff", "--name-only"]).decode("utf-8").strip().split("\n")
-        untrakd = subprocess.check_output(["git", "ls-files", "--others", "--exclude-standard"]).decode("utf-8").strip().split("\n")
-        files = "\n\t".join(filter(None, changed + untrakd))
+        untracked = subprocess.check_output(["git", "ls-files", "--others", "--exclude-standard"]).decode("utf-8").strip().split("\n")
+        files = "\n\t".join(filter(None, changed + untracked))
         if not files:
             return None
         return self.aux.system(f'echo "\n\t{files}\n" | cut -c2- | rsync -a --files-from=- . {dest}')
@@ -492,7 +491,7 @@ class Aux(Component):
         raise Exception(text)
 
     def error(self, text, color="error"):
-        print(self.colored(text, color))
+        print(self.colored(text, color, sys.stderr.isatty()), file=sys.stderr)
 
     def warning(self, text, color="warning"):
         print(self.colored(text, color))
