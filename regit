@@ -78,9 +78,11 @@ class ReGit:
         result = 0
         for path in self.config.repos:
             if not os.path.exists(path):
-                result = self.git.clone("", path)
+                err = self.git.clone("", path)
             else:
-                result = self.repeat.up(path)
+                err = self.repeat.up(path)
+            if err and not result:
+                result = err
         return result
 
     def lgrab(self):
@@ -167,7 +169,7 @@ class Repeat(Component):
 
     def do(self, command, path):
         if not path:
-            self.aux.die("path not given for up_in_dir")
+            self.aux.die("path not given for repeat")
         if path == ".":
             return self.aux.do_regit(command)
         cwd = os.getcwd()
@@ -216,11 +218,9 @@ class Scanner(Component):
         "nothing to commit, working directory clean",
         "nothing to commit, working tree clean",
     )
+    AHEAD = "Your branch is ahead"
     BEHIND = "Your branch is behind"
-    FETCHES = (
-        "Your branch is ahead",
-        "Your branch is behind",
-    )
+    FETCHES = (AHEAD, BEHIND)
 
     def scan(self):
         self.dir = os.getcwd()
@@ -241,17 +241,13 @@ class Scanner(Component):
         for dir in repos:
             dir = self.dir + "/" + dir[2:-6]
             msg = self.WINDMILL[no % 4] + " " + dir
-            self.aux.tprint("\b" * 300)
-            self.aux.tprint(msg.ljust(len(prev)))
+            self.aux.tprint("\r" + msg.ljust(len(prev)))
             prev = msg
             no += 1
             status = self.check(dir)
             if status:
                 stats[dir] = status
-        self.aux.tprint("\r")
-        self.aux.tprint("".ljust(len(prev)))  # cleans string with spaces
-        self.aux.tprint("\b" * 300)
-        self.aux.tprint("\r")
+        self.aux.tprint("\r" + "".ljust(len(prev)) + "\r")
         return stats
 
     def output_stats(self, stats):
@@ -264,7 +260,7 @@ class Scanner(Component):
             status = stats[dir]
             avail = cols - maxlen - 3  # " - " separator
             if avail > 0 and len(status) > avail:
-                status = status[:avail - 3] + "..."
+                status = status[: avail - 3] + "..."
             print("{} - {}".format(dir.ljust(maxlen), self.aux.colored(status, "yellow")))
 
     def terminal_width(self):
@@ -307,9 +303,7 @@ class Scanner(Component):
         return None
 
     def list_untracked(self):
-        output = subprocess.check_output(
-            ["git", "ls-files", "--others", "--exclude-standard"]
-        ).decode("utf-8").strip()
+        output = subprocess.check_output(["git", "ls-files", "--others", "--exclude-standard"]).decode("utf-8").strip()
         if not output:
             return []
         return output.split("\n")
@@ -376,7 +370,7 @@ class Config(Component):
             check = re.search(r"^\[(.+)\]$", line)
             if check:
                 section = check.group(1)
-                if not section in result:
+                if section not in result:
                     result[section] = {}
                 continue
             check = re.search(r"^\s*(.+?)\s*=\s*(.+)\s*$", line)
@@ -421,7 +415,7 @@ class Config(Component):
         repo = self.repos.get(path)
         if repo and repo != path:
             return repo
-        if not path in self.knownRepos:
+        if path not in self.knownRepos:
             parts = path.split(os.path.sep)
             if len(parts) < 2:
                 return ""
@@ -434,12 +428,12 @@ class Config(Component):
         if check is None:
             return False
         source = check.group(1)
-        if not source in self.knownSources:
+        if source not in self.knownSources:
             return False
         return self.knownSources[source] + check.group(2)
 
     def is_repo_with_source(self, path):
-        return re.match("^([\w.-]+):([\w.-]+/?[\w.-]*)$", path)
+        return re.match(r"^([\w.-]+):([\w.-]+/?[\w.-]*)$", path)
 
     def is_repo_url(self, repo):
         return ":" in repo or "@" in repo
@@ -475,9 +469,6 @@ class Aux(Component):
     def do_regit(self, command):
         return self.system(__file__ + " " + command)
 
-    def rsync_move(self, src, dst):
-        return self.system("rsync -a --remove-source-files {src}/ {dst}/".format(src=src, dst=dst))
-
     def system(self, command, quiet=False):
         if not quiet:
             self.notice("> " + command.rstrip())
@@ -498,12 +489,6 @@ class Aux(Component):
 
     def notice(self, text, color="notice"):
         print(self.colored(text, color))
-
-    def which(self, binary):
-        return self.backtick("which " + binary)
-
-    def backtick(self, command):
-        return os.popen(command).read().strip()
 
     def tprint(self, text):
         if sys.stdout.isatty():
