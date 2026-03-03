@@ -15,10 +15,15 @@ Wraps git with several useful features:
 
 ## Installation
 
-No installation required.
-It's just a single Python 3 executable without dependencies.
+Single Python 3 executable, no dependencies.
 
-Just download and run.
+```sh
+git clone https://github.com/hiqsol/regit.git ~/.local/share/regit
+ln -s ~/.local/share/regit/regit ~/.local/bin/regit
+```
+
+Make sure `~/.local/bin` is in your `PATH`.
+Then update anytime with `regit self`.
 
 ## Alternatives
 
