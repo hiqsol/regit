@@ -1,6 +1,6 @@
 # Agent instructions
 
-reGit - Repeated Git - single python binary project
+**reGit** - Repeated Git - single python binary project
 
 ## This file
 
@@ -10,7 +10,5 @@ reGit - Repeated Git - single python binary project
 
 ## Documentation
 
-- For detailed documentation guidelines see @docs/documentation.md
-- `README.md`: human-facing only (purpose, setup, usage). No agent instructions.
-- `docs/`: one topic per file, descriptive filenames. Write for humans, structure for AI.
+- All documentation in `README.md`. No agent instructions.
 - Markdown line length: hard limit 100 chars. Prefer 80-99 over excessive wrapping.

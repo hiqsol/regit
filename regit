@@ -5,6 +5,7 @@ import re
 import sys
 import tempfile
 import argparse
+import shutil
 import subprocess
 from collections import OrderedDict
 
@@ -136,10 +137,11 @@ class Repeat(Component):
             return self.aux.do_regit(command)
         cwd = os.getcwd()
         os.chdir(path)
-        self.aux.warning(os.getcwd())
-        result = self.aux.do_regit(command)
-        os.chdir(cwd)
-        return result
+        try:
+            self.aux.warning(os.getcwd())
+            return self.aux.do_regit(command)
+        finally:
+            os.chdir(cwd)
 
 
 class Cloner(Component):
@@ -159,10 +161,13 @@ class Cloner(Component):
         cwd = os.getcwd()
         tmp = tempfile.mkdtemp()
 
-        result = self.git.clone(repo, tmp)
-        if result:
-            return result
-        return self.aux.system("rsync -a --ignore-existing {tmp}/ {cwd}/".format(tmp=tmp, cwd=cwd))
+        try:
+            result = self.git.clone(repo, tmp)
+            if result:
+                return result
+            return self.aux.system("rsync -a --ignore-existing {tmp}/ {cwd}/".format(tmp=tmp, cwd=cwd))
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
 
 
 class Scaner(Component):
@@ -224,19 +229,23 @@ class Scaner(Component):
 
     def check(self, dir):
         args = self.regit.args
+        cwd = os.getcwd()
         os.chdir(dir)
-        status = self.check_status()
-        if status is None and not args.force:
-            return
-        if args.skip_behind and status.startswith(self.BEHIND):
-            return
-        if args.force or status.startswith(self.FETCHES):
-            quiet = "" if args.verbose else " --quiet"
-            self.git.do(args.pull + quiet, not args.verbose)
+        try:
             status = self.check_status()
-            if status is None:
+            if status is None and not args.force:
                 return
-        return status
+            if args.skip_behind and status.startswith(self.BEHIND):
+                return
+            if args.force or status.startswith(self.FETCHES):
+                quiet = "" if args.verbose else " --quiet"
+                self.git.do(args.pull + quiet, not args.verbose)
+                status = self.check_status()
+                if status is None:
+                    return
+            return status
+        finally:
+            os.chdir(cwd)
 
     def check_status(self):
         status = None
@@ -336,13 +345,18 @@ class Config(Component):
             path = os.path.basename(os.getcwd()) + "/" + path
         return self.config.defaultSource + path
 
-    def repath2repo(self, path):
+    def repath2repo(self, path, _seen=None):
+        if _seen is None:
+            _seen = set()
+        if path in _seen:
+            return path
+        _seen.add(path)
         repo = self.source2repo(path)
         if not repo:
             repo = self.path2repo(path)
         if repo == path:
             return repo
-        return self.repath2repo(repo)
+        return self.repath2repo(repo, _seen)
 
     def path2repo(self, path):
         repo = self.source2repo(path)
@@ -448,7 +462,7 @@ class Aux(Component):
         print(self.colored(text, color))
 
     def which(self, binary):
-        return backtick("which " + binary)
+        return self.backtick("which " + binary)
 
     def backtick(self, command):
         return os.popen(command).read().strip()
