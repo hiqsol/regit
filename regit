@@ -12,7 +12,9 @@ from collections import OrderedDict
 
 class ReGit:
     def __init__(self):
-        self._start()
+        result = self._start()
+        if result:
+            sys.exit(result)
 
     def _start(self):
         res = self.parser.parse_known_args()
@@ -467,7 +469,7 @@ class Aux(Component):
     def system(self, command, quiet=False):
         if not quiet:
             self.notice("> " + command.rstrip())
-        result = os.system(command)
+        result = subprocess.call(command, shell=True)
         if result:
             self.error("! failed")
         return result
@@ -537,8 +539,6 @@ class ArgParser(Component):
         self.add_up()
 
     def add_base(self):
-        self.parser.add_argument("-f", "--force", action="store_const", dest="force", const=True, default=False, help="force")
-        self.parser.add_argument("-v", "--verbose", action="store_const", dest="verbose", const="", default=False, help="be verbose")
         self.parser.add_argument("-C", dest="start_path", help="start at given directory")
         self.parser.add_argument("-V", "--version", action="version", version="%(prog)s 0.0.1")
         self.subparsers = self.parser.add_subparsers(dest="command", help="sub-command name")
@@ -553,6 +553,8 @@ class ArgParser(Component):
 
     def add_scan(self):
         parser = self.subparsers.add_parser("scan", help="recursively scan dirs for repos requiring attention")
+        parser.add_argument("-f", "--force", action="store_const", dest="force", const=True, default=False, help="force")
+        parser.add_argument("-v", "--verbose", action="store_const", dest="verbose", const="", default=False, help="be verbose")
         parser.add_argument("-b", "--skip-behind", action="store_const", dest="skip_behind", const=True, default=False, help="skip 'Your branch is behind'")
         parser.add_argument("-p", "--pull", action="store_const", dest="pull", const="pull", default="fetch", help="pull instead of fetch")
 
