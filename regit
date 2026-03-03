@@ -16,7 +16,7 @@ class ReGit:
             sys.exit(result)
 
     GIT_COMMANDS = ["up", "scan", "grab", "lgrab", "sync", "deps"]
-    COMMANDS = GIT_COMMANDS + ["install", "uninstall", "self", "help"]
+    COMMANDS = GIT_COMMANDS + ["install", "uninstall", "self"]
 
     def _start(self):
         basename = os.path.basename(sys.argv[0])
@@ -42,9 +42,6 @@ class ReGit:
             return getattr(self, command)()
         self.aux.error("regit: unknown command '{}'".format(command))
         return 1
-
-    def help(self):
-        self.parser.print_help()
 
     def install(self):
         regit_path = os.path.realpath(__file__)
@@ -555,7 +552,6 @@ class ArgParser(Component):
         self.add_sync()
         self.add_self()
         self.add_up()
-        self.add_help()
 
     def add_base(self):
         self.parser.add_argument("-C", dest="start_path", help="start at given directory")
@@ -563,36 +559,54 @@ class ArgParser(Component):
         self.subparsers = self.parser.add_subparsers(dest="command", help="sub-command name")
 
     def add_clone(self, name):
-        parser = self.subparsers.add_parser(name, help="clone with URL resolution (use . for cwd, .git for metadata only)")
+        desc = "Clone with URL resolution from ~/.config/regit/config. " \
+               "Use '.' to rsync into current directory, '.git' for metadata only."
+        parser = self.subparsers.add_parser(name, description=desc,
+            help="clone with URL resolution (use . for cwd, .git for metadata only)")
         parser.add_argument("repo", help="repository url or name")
-        parser.add_argument("path", nargs="?", default="", help="path, '.' to rsync into cwd, '.git' for metadata only")
+        parser.add_argument("path", nargs="?", default="",
+            help="path, '.' to rsync into cwd, '.git' for metadata only")
 
     def add_deps(self):
-        self.subparsers.add_parser("deps", help="update dependencies")
+        self.subparsers.add_parser("deps", description="Pull dependencies listed in .regit config.",
+            help="update dependencies")
 
     def add_install(self):
-        self.subparsers.add_parser("install", help="create git-* symlinks")
-        self.subparsers.add_parser("uninstall", help="remove git-* symlinks")
+        self.subparsers.add_parser("install",
+            description="Create git-* symlinks in the same directory as the regit binary "
+            "so commands work as 'git up', 'git scan', etc.",
+            help="create git-* symlinks")
+        self.subparsers.add_parser("uninstall",
+            description="Remove git-* symlinks created by 'regit install'.",
+            help="remove git-* symlinks")
 
     def add_scan(self):
-        parser = self.subparsers.add_parser("scan", help="recursively scan dirs for repos requiring attention")
+        parser = self.subparsers.add_parser("scan",
+            description="Recursively scan directory tree for git repos that have "
+            "uncommitted changes, unpushed commits, or are behind remote.",
+            help="recursively scan dirs for repos requiring attention")
         parser.add_argument("-f", "--force", action="store_true", help="force")
         parser.add_argument("-v", "--verbose", action="store_true", help="be verbose")
-        parser.add_argument("-b", "--skip-behind", action="store_true", help="skip 'Your branch is behind'")
-        parser.add_argument("-p", "--pull", action="store_const", const="pull", default="fetch", help="pull instead of fetch")
+        parser.add_argument("-b", "--skip-behind", action="store_true",
+            help="skip 'Your branch is behind'")
+        parser.add_argument("-p", "--pull", action="store_const", const="pull",
+            default="fetch", help="pull instead of fetch")
 
     def add_sync(self):
-        parser = self.subparsers.add_parser("sync", help="rsync only git changed and untracked files to given path")
+        parser = self.subparsers.add_parser("sync",
+            description="Rsync only git-changed and untracked files to the given destination path.",
+            help="rsync only git changed and untracked files to given path")
         parser.add_argument("path", help="path to rsync to")
 
     def add_self(self):
-        self.subparsers.add_parser("self", help="update itself to the latest version")
+        self.subparsers.add_parser("self",
+            description="Update regit to the latest version by pulling from the git repository.",
+            help="update itself to the latest version")
 
     def add_up(self):
-        self.subparsers.add_parser("up", help="update current repo and dependencies")
-
-    def add_help(self):
-        self.subparsers.add_parser("help", help="show this help message")
+        self.subparsers.add_parser("up",
+            description="Pull current repo with rebase and recursively update dependencies.",
+            help="update current repo and dependencies")
 
     def parse_known_args(self):
         return self.parser.parse_known_args()
