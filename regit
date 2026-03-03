@@ -7,6 +7,7 @@ import tempfile
 import argparse
 import shutil
 import subprocess
+from functools import cached_property
 
 
 class ReGit:
@@ -26,22 +27,20 @@ class ReGit:
                 self.aux.error("regit: unknown command '{}'".format(command))
                 return 1
             sys.argv = [sys.argv[0], command] + sys.argv[1:]
-            self.args, _ = self.parser.parse_known_args()
-            if self.args.start_path:
-                os.chdir(self.args.start_path)
-            return getattr(self, command)()
 
-        self.args, extras = self.parser.parse_known_args()
+        self.args, _ = self.parser.parse_known_args()
         command = self.args.command
+
         if not isinstance(command, str) or command.startswith("_"):
             self.parser.print_help()
             return 1
-        if command in self.COMMANDS:
-            if self.args.start_path:
-                os.chdir(self.args.start_path)
-            return getattr(self, command)()
-        self.aux.error("regit: unknown command '{}'".format(command))
-        return 1
+        if command not in self.COMMANDS:
+            self.aux.error("regit: unknown command '{}'".format(command))
+            return 1
+
+        if self.args.start_path:
+            os.chdir(self.args.start_path)
+        return getattr(self, command)()
 
     def install(self):
         regit_path = os.path.realpath(__file__)
@@ -95,45 +94,40 @@ class ReGit:
     def sync(self):
         if not self.args.path:
             self.parser.print_subcommand_help("sync")
-            return None
+            return 1
         return self.syncer.sync(self.args.path)
 
-    def _getProp(self, name, klass):
-        if not hasattr(self, name):
-            setattr(self, name, klass(self))
-        return getattr(self, name)
-
-    @property
+    @cached_property
     def aux(self):
-        return self._getProp("_aux", Aux)
+        return Aux(self)
 
-    @property
+    @cached_property
     def git(self):
-        return self._getProp("_git", Git)
+        return Git(self)
 
-    @property
+    @cached_property
     def config(self):
-        return self._getProp("_config", Config)
+        return Config(self)
 
-    @property
+    @cached_property
     def cloner(self):
-        return self._getProp("_cloner", Cloner)
+        return Cloner(self)
 
-    @property
+    @cached_property
     def scanner(self):
-        return self._getProp("_scanner", Scanner)
+        return Scanner(self)
 
-    @property
+    @cached_property
     def syncer(self):
-        return self._getProp("_syncer", Syncer)
+        return Syncer(self)
 
-    @property
+    @cached_property
     def parser(self):
-        return self._getProp("_parser", ArgParser)
+        return ArgParser(self)
 
-    @property
+    @cached_property
     def repeat(self):
-        return self._getProp("_repeat", Repeat)
+        return Repeat(self)
 
 
 class Component:
