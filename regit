@@ -246,8 +246,9 @@ class Scanner(Component):
     def find_repos(self):
         self.aux.tprint(self.GREETING)
         sys.stdout.flush()
-        raws = os.popen("find . -name .git").readlines()
-        return sorted(raws)
+        result = subprocess.run(["find", ".", "-name", ".git"],
+            capture_output=True, text=True)
+        return sorted(result.stdout.splitlines(keepends=True))
 
     def check_repos(self, repos):
         stats = {}
@@ -306,7 +307,8 @@ class Scanner(Component):
 
     def check_status(self):
         status = None
-        for line in os.popen("git status").readlines():
+        result = subprocess.run(["git", "status"], capture_output=True, text=True)
+        for line in result.stdout.splitlines():
             status = line.strip()
             if status and not self.is_skippable(status):
                 status = status.strip(".,:")
