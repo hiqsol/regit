@@ -16,10 +16,8 @@ class ReGit:
         if result:
             sys.exit(result)
 
-    COMMANDS = [
-        "up", "scan", "grab", "lgrab", "sync", "deps",
-        "install", "uninstall", "self", "help",
-    ]
+    GIT_COMMANDS = ["up", "scan", "grab", "lgrab", "sync", "deps"]
+    COMMANDS = GIT_COMMANDS + ["install", "uninstall", "self", "help"]
 
     def _start(self):
         basename = os.path.basename(sys.argv[0])
@@ -34,10 +32,7 @@ class ReGit:
                 os.chdir(self.args.start_path)
             return getattr(self, command)()
 
-        res = self.parser.parse_known_args()
-        if res is None:
-            return 1
-        self.args, extras = res
+        self.args, extras = self.parser.parse_known_args()
         command = self.args.command
         if not isinstance(command, str) or command.startswith("_"):
             self.parser.print_help()
@@ -55,8 +50,7 @@ class ReGit:
     def install(self):
         regit_path = os.path.realpath(__file__)
         bin_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-        commands = ["up", "scan", "grab", "lgrab", "sync", "deps"]
-        for cmd in commands:
+        for cmd in self.GIT_COMMANDS:
             link = os.path.join(bin_dir, "git-" + cmd)
             if os.path.exists(link) or os.path.islink(link):
                 os.remove(link)
@@ -66,8 +60,7 @@ class ReGit:
 
     def uninstall(self):
         bin_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-        commands = ["up", "scan", "grab", "lgrab", "sync", "deps"]
-        for cmd in commands:
+        for cmd in self.GIT_COMMANDS:
             link = os.path.join(bin_dir, "git-" + cmd)
             if os.path.islink(link):
                 os.remove(link)
@@ -289,9 +282,9 @@ class Scaner(Component):
             status = self.check_status()
             if status is None and not args.force:
                 return
-            if args.skip_behind and status.startswith(self.BEHIND):
+            if status is not None and args.skip_behind and status.startswith(self.BEHIND):
                 return
-            if args.force or status.startswith(self.FETCHES):
+            if args.force or (status is not None and status.startswith(self.FETCHES)):
                 quiet = "" if args.verbose else " --quiet"
                 self.git.do(args.pull + quiet, not args.verbose)
                 status = self.check_status()
@@ -580,7 +573,7 @@ class ArgParser(Component):
     def add_scan(self):
         parser = self.subparsers.add_parser("scan", help="recursively scan dirs for repos requiring attention")
         parser.add_argument("-f", "--force", action="store_const", dest="force", const=True, default=False, help="force")
-        parser.add_argument("-v", "--verbose", action="store_const", dest="verbose", const="", default=False, help="be verbose")
+        parser.add_argument("-v", "--verbose", action="store_true", dest="verbose", default=False, help="be verbose")
         parser.add_argument("-b", "--skip-behind", action="store_const", dest="skip_behind", const=True, default=False, help="skip 'Your branch is behind'")
         parser.add_argument("-p", "--pull", action="store_const", dest="pull", const="pull", default="fetch", help="pull instead of fetch")
 
