@@ -538,7 +538,7 @@ class Aux(Component):
 
 
 class ArgParser(Component):
-    VERSION = "0.0.1"
+    VERSION = "0.1.0"
 
     def __init__(self, regit):
         self.regit = regit
