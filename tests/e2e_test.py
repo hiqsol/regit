@@ -157,6 +157,36 @@ class TestGrab:
         assert (target / ".git").is_dir()
         assert not (target / "README.md").exists()
 
+    def test_dot_repo_autodetect(self, env):
+        bare = env["remotes"] / "project"
+        make_bare_repo(str(bare),
+                       files={"README.md": "# project\n"},
+                       env=env["env"])
+
+        vendor = env["workspace"] / "vendor"
+        vendor.mkdir()
+        project_dir = vendor / "project"
+        project_dir.mkdir()
+        (project_dir / "local.txt").write_text("keep me\n")
+
+        config_dir = env["home"] / ".config" / "regit"
+        config = config_dir / "config"
+        config.write_text(
+            config.read_text()
+            + "vendor/project = file://{}/project\n".format(env["remotes"])
+        )
+
+        result = run_regit("grab", ".", ".git",
+                           cwd=str(project_dir), env=env["env"])
+        assert result.returncode == 0, result.stderr
+        assert (project_dir / ".git").is_dir()
+        assert (project_dir / "local.txt").read_text() == "keep me\n"
+        st = subprocess.run(
+            ["git", "-C", str(project_dir), "status", "--porcelain"],
+            capture_output=True, text=True, env=env["env"],
+        )
+        assert "local.txt" in st.stdout
+
     def test_dotgit_rejects_existing(self, env):
         repo_url = "file://{}/dep-a".format(env["remotes"])
         target = env["workspace"] / "has-git"

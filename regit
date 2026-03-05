@@ -396,6 +396,9 @@ class Config(Component):
         return os.path.basename(url)
 
     def path2repo_or_die(self, path):
+        if path == ".":
+            cwd = os.getcwd()
+            path = os.path.basename(os.path.dirname(cwd)) + "/" + os.path.basename(cwd)
         repo = self.repath2repo(path)
         if repo:
             return repo
