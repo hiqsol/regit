@@ -196,7 +196,7 @@ class Cloner(Component):
             if result:
                 return result
             shutil.move(os.path.join(tmp, ".git"), ".git")
-            return 0
+            return self.git.do("reset")
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
