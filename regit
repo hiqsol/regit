@@ -16,7 +16,7 @@ class ReGit:
         if result:
             sys.exit(result)
 
-    GIT_COMMANDS = ["up", "scan", "grab", "lgrab", "sync", "deps"]
+    GIT_COMMANDS = ["up", "scan", "grab", "lgrab", "sync", "deps", "log"]
     COMMANDS = GIT_COMMANDS + ["install", "uninstall", "self"]
 
     def _start(self):
@@ -91,6 +91,9 @@ class ReGit:
     def scan(self):
         return self.scanner.scan()
 
+    def log(self):
+        return self.logger.log()
+
     def sync(self):
         if not self.args.path:
             self.parser.print_subcommand_help("sync")
@@ -116,6 +119,10 @@ class ReGit:
     @cached_property
     def scanner(self):
         return Scanner(self)
+
+    @cached_property
+    def logger(self):
+        return Logger(self)
 
     @cached_property
     def syncer(self):
@@ -323,6 +330,53 @@ class Scanner(Component):
         if status.startswith("# "):
             status = status[2:]
         return status.startswith(self.SKIPS)
+
+
+class Logger(Component):
+    """Collect git log across all repos in a directory tree."""
+
+    def log(self):
+        args = self.regit.args
+        since = args.since or "24h"
+        # Normalize: accept "24h", "1d", "1 day", "2025-01-01", etc.
+        # git log --since understands relative and absolute formats
+        since_arg = since.replace("h", " hours").replace("d", " days") if re.match(r"^\d+[hd]$", since) else since
+
+        repos = self._find_repos()
+        if not repos:
+            print("No git repositories found.")
+            return 0
+
+        has_output = False
+        for repo_path in repos:
+            result = subprocess.run(
+                ["git", "-C", repo_path, "log", "--oneline", "--since=" + since_arg, "--no-merges"],
+                capture_output=True, text=True,
+            )
+            lines = result.stdout.strip()
+            if lines:
+                name = os.path.relpath(repo_path)
+                if not has_output:
+                    has_output = True
+                self.aux.warning(name)
+                print(lines)
+                print()
+
+        if not has_output:
+            print("No changes in the last {}.".format(since))
+        return 0
+
+    def _find_repos(self):
+        result = subprocess.run(
+            ["find", ".", "-name", ".git", "-maxdepth", "3"],
+            capture_output=True, text=True,
+        )
+        dirs = []
+        for line in sorted(result.stdout.splitlines()):
+            repo = line.strip()
+            if repo.endswith("/.git"):
+                dirs.append(repo[:-5])
+        return dirs
 
 
 class Syncer(Component):
@@ -547,6 +601,7 @@ class ArgParser(Component):
         self.add_clone("lgrab")
         self.add_deps()
         self.add_install()
+        self.add_log()
         self.add_scan()
         self.add_sync()
         self.add_self()
@@ -578,6 +633,14 @@ class ArgParser(Component):
         self.subparsers.add_parser("uninstall",
             description="Remove git-* symlinks created by 'regit install'.",
             help="remove git-* symlinks")
+
+    def add_log(self):
+        parser = self.subparsers.add_parser("log",
+            description="Show recent git log across all repos in the directory tree. "
+            "Groups output by repo, skips repos with no changes.",
+            help="show recent commits across all repos")
+        parser.add_argument("-s", "--since", default="24h",
+            help="time window (default: 24h). Accepts: 24h, 7d, '2 weeks', ISO date")
 
     def add_scan(self):
         parser = self.subparsers.add_parser("scan",
