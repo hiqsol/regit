@@ -157,6 +157,19 @@ class Component:
     def repeat(self):
         return self.regit.repeat
 
+    def find_repos(self, maxdepth=None):
+        cmd = ["find", "."]
+        if maxdepth is not None:
+            cmd += ["-maxdepth", str(maxdepth)]
+        cmd += ["-name", ".git"]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        dirs = []
+        for line in sorted(result.stdout.splitlines()):
+            path = line.strip()
+            if path.endswith("/.git"):
+                dirs.append(path[:-5])
+        return dirs
+
 
 class Repeat(Component):
     def up(self, path):
@@ -239,24 +252,21 @@ class Scanner(Component):
     FETCHES = (AHEAD, BEHIND)
 
     def scan(self):
-        self.dir = os.getcwd()
-        repos = self.find_repos()
+        repos = self.scan_repos()
         stats = self.check_repos(repos)
         self.output_stats(stats)
 
-    def find_repos(self):
+    def scan_repos(self):
         self.aux.tprint(self.GREETING)
         sys.stdout.flush()
-        result = subprocess.run(["find", ".", "-name", ".git"],
-            capture_output=True, text=True)
-        return sorted(result.stdout.splitlines(keepends=True))
+        return self.find_repos()
 
     def check_repos(self, repos):
         stats = {}
         no = 0
         prev = self.GREETING
         for dir in repos:
-            dir = self.dir + "/" + dir[2:-6]
+            dir = os.path.abspath(dir)
             msg = self.WINDMILL[no % 4] + " " + dir
             self.aux.tprint("\r" + msg.ljust(len(prev)))
             prev = msg
@@ -335,14 +345,14 @@ class Scanner(Component):
 class Logger(Component):
     """Collect git log across all repos in a directory tree."""
 
-    def log(self):
-        args = self.regit.args
-        since = args.since or "24h"
-        # Normalize: accept "24h", "1d", "1 day", "2025-01-01", etc.
-        # git log --since understands relative and absolute formats
-        since_arg = since.replace("h", " hours").replace("d", " days") if re.match(r"^\d+[hd]$", since) else since
+    UNITS = {"h": "hours", "d": "days"}
 
-        repos = self._find_repos()
+    def log(self):
+        since = self.regit.args.since
+        m = re.match(r"^(\d+)([hd])$", since)
+        since_arg = "{} {}".format(m.group(1), self.UNITS[m.group(2)]) if m else since
+
+        repos = self.find_repos(maxdepth=3)
         if not repos:
             print("No git repositories found.")
             return 0
@@ -355,28 +365,14 @@ class Logger(Component):
             )
             lines = result.stdout.strip()
             if lines:
-                name = os.path.relpath(repo_path)
-                if not has_output:
-                    has_output = True
-                self.aux.warning(name)
+                has_output = True
+                self.aux.warning(os.path.relpath(repo_path))
                 print(lines)
                 print()
 
         if not has_output:
             print("No changes in the last {}.".format(since))
         return 0
-
-    def _find_repos(self):
-        result = subprocess.run(
-            ["find", ".", "-name", ".git", "-maxdepth", "3"],
-            capture_output=True, text=True,
-        )
-        dirs = []
-        for line in sorted(result.stdout.splitlines()):
-            repo = line.strip()
-            if repo.endswith("/.git"):
-                dirs.append(repo[:-5])
-        return dirs
 
 
 class Syncer(Component):
