@@ -360,7 +360,7 @@ class Logger(Component):
         has_output = False
         for repo_path in repos:
             result = subprocess.run(
-                ["git", "-C", repo_path, "log", "--oneline", "--since=" + since_arg, "--no-merges"],
+                ["git", "-C", repo_path, "log", "--format=%h %an: %s", "--since=" + since_arg, "--no-merges"],
                 capture_output=True, text=True,
             )
             lines = result.stdout.strip()
